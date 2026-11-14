@@ -21,7 +21,8 @@
 .detector-visual { position:sticky; top:6rem; margin:0; background:var(--sky); border-radius:1.5rem; overflow:hidden; transition:background .3s ease; }
 .detector-visual svg { display:block; width:100%; height:auto; }
 .detector-visual figcaption { padding:0 1.5rem 1.5rem; font-size:.75rem; color:#454640; }
-.detector-composition .pattern { transition:background .2s ease; }
+.detector-composition .pattern { cursor:pointer; transition:background .2s ease; }
+.detector-composition .pattern:hover { background:color-mix(in srgb,var(--sky) 20%,var(--paper)); }
 .detector-composition .pattern.is-active { background:color-mix(in srgb,var(--sage) 22%,var(--paper)); }
 .detector-choice { position:relative; font:inherit; letter-spacing:inherit; text-align:left; color:inherit; background:none; border:0; padding:0; cursor:pointer; }
 .detector-choice::after { content:'↗'; position:absolute; right:-1.2em; top:.15em; font-size:.65em; opacity:0; transition:opacity .2s ease; }
@@ -81,7 +82,7 @@
     button.className = 'detector-choice'; button.type = 'button';
     button.textContent = heading.textContent;
     heading.replaceChildren(button); choices.push(button);
-    button.addEventListener('click', () => select(article));
+    article.addEventListener('click', () => select(article));
     button.addEventListener('keydown', event => {
       if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
       event.preventDefault();

@@ -262,3 +262,6 @@ measured in the checklist. The user authorized completing through M8 without pau
 - M11 still needs the single final test report. Sensitivity tables, baseline
   clustering variants, difference confidence intervals, and straddler lists
   are not done.
+- M12 uses only the offline `LLMClient` stub; no provider integration is done.
+  Validation failure falls back to the alert's deterministic template and is
+  counted in `outputs/narrative_stats.json`.

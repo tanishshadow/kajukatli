@@ -6,17 +6,33 @@ from aml.graph.build import load_graph
 from aml.detect.common import Hit
 from aml.narrative.template import alert_from_hit
 from aml.api.schemas import Alert
+from aml.narrative.render import OfflineLLMClient, render_narrative
 
 
 def run(settings: Settings) -> dict[str, object]:
     ranked_path = settings.output_dir / "m8" / "alerts.json"
     if ranked_path.exists():
         alerts = [Alert.model_validate(value) for value in json.loads(ranked_path.read_text())]
+        failures = 0
+        client = OfflineLLMClient()
+        for alert in alerts:
+            template = alert.summary
+            try:
+                alert.summary = render_narrative(client.generate(alert.evidence, "AML patterns"), alert.evidence)
+                alert.summary_source = "llm_validated"
+            except Exception:
+                failures += 1
+                alert.summary = template
+                alert.summary_source = "template"
         # M8 already renders deterministic templates. Preserve learned scores
         # when this command is called after the earlier vertical-slice milestone.
         destination = settings.output_dir / "alerts.json"
         destination.write_text(json.dumps([a.model_dump(mode="json") for a in alerts], indent=2) + "\n")
-        return {"alerts": len(alerts), "model_score_available": True, "summary_source": "template",
+        stats = {"alerts": len(alerts), "failure_count": failures,
+                 "failure_rate": failures / len(alerts) if alerts else 0.0}
+        (settings.output_dir / "narrative_stats.json").write_text(json.dumps(stats, indent=2) + "\n")
+        return {"alerts": len(alerts), "model_score_available": True, "summary_source": "llm_validated",
+                "narrative_failures": failures, "narrative_failure_rate": failures / max(1, len(alerts)),
                 "command": "aml narrate", "output": str(destination)}
     directory = settings.data.processed_dir
     graph = load_graph(directory / "transactions.parquet", directory / "accounts.parquet")

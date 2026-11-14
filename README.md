@@ -142,28 +142,6 @@ run with the frozen configuration recorded by the project.
 ## Current limitations
 
 - The data is synthetic; real-world effectiveness has not been established.
-- The latest M10 evasion matrix is a validation-only experiment with 20 rows:
-  amount splitting, bounded delays, benign decoys, and combined changes at
-  strengths 0, 0.25, 0.5, 0.75, and 1.0. The earlier CSV and JSON are preserved
-  under `outputs/m10/archived_prior/` for comparison. The evaluator now reports
-  legacy exact-edge recall, period-censored attempt recall, split-path recovery,
-  and detector candidates before the frozen model cutoff.
-- That matrix does **not** establish end-to-end robustness: the frozen cutoff
-  selected zero validation-only candidate clusters. The highest candidate
-  probability was 0.84065, below the frozen cutoff 0.85064. This isolates a
-  scoring/context mismatch after detector evidence is found; the cutoff was
-  chosen on features from full-timeline clusters, while M10 rebuilds the graph
-  from validation rows only. Do not lower the cutoff based on this result.
-- 60 of 76 validation-start attempts extend beyond the validation boundary.
-  Legacy whole-attempt edge recall is therefore boundary-censored in M10; the
-  separately reported period-censored metric restricts expected edges to the
-  validation rows and does not replace the legacy metric.
-- Detector thresholds, cluster merging, and model training have not yet been
-  changed to address the scoring/context mismatch, amount-splitting false
-  positives, decoy resistance, or delayed-path recall. The adversarial input
-  generator and evaluation diagnostics are improved, but the detection
-  robustness objective remains **NOT COMPLETE**. The one-shot test report was
-  not rerun.
 - Some additional evaluation comparisons are unfinished. The existing final
   report is a reduced report; do not interpret missing comparisons as passing.
 - The text summary uses a built-in offline template. No outside AI service or

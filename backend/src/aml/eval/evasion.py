@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -29,15 +28,8 @@ Perturbation = Literal["amount_split", "delays", "decoys", "combined"]
 KINDS: tuple[Perturbation, ...] = ("amount_split", "delays", "decoys", "combined")
 
 
-@dataclass
-class PerturbationTrace:
-    """Maps each original attempt transfer to one or more transformed paths."""
-
-    paths_by_attempt: dict[str, dict[int, list[tuple[int, ...]]]] = field(default_factory=dict)
-
-
-def _perturb_with_trace(frame: pd.DataFrame, attempts: list[Attempt], strength: float, kind: Perturbation,
-                        seed: int) -> tuple[pd.DataFrame, list[Attempt], PerturbationTrace]:
+def _perturb(frame: pd.DataFrame, attempts: list[Attempt], strength: float, kind: Perturbation,
+             seed: int) -> tuple[pd.DataFrame, list[Attempt]]:
     if not 0 <= strength <= 1:
         raise ValueError("strength must be in [0, 1]")
     rng = np.random.default_rng(seed)
@@ -47,13 +39,11 @@ def _perturb_with_trace(frame: pd.DataFrame, attempts: list[Attempt], strength: 
     next_tx = int(result.tx_id.max()) + 1 if len(result) else 0
     append: list[dict] = []
     attempt_updates: dict[str, Attempt] = {a.attempt_id: a.model_copy(deep=True) for a in attempts}
-    trace = PerturbationTrace()
+    split_edges: dict[int, list[int]] = {}
     if strength and kind in ("amount_split", "combined"):
         paths = max(2, int(np.ceil(2 + 8 * strength)))
         for attempt in attempts:
             updated_ids: list[int] = []
-            attempt_paths: dict[int, list[tuple[int, ...]]] = {}
-            intermediaries: set[int] = set()
             for edge_id in attempt.edge_ids:
                 matches = result.index[result.tx_id == edge_id]
                 if len(matches) != 1:
@@ -64,7 +54,6 @@ def _perturb_with_trace(frame: pd.DataFrame, attempts: list[Attempt], strength: 
                 for _ in range(paths):
                     intermediary = next_account
                     next_account += 1
-                    intermediaries.add(intermediary)
                     first_id, second_id = next_tx, next_tx + 1
                     next_tx += 2
                     common = {k: v for k, v in row.items() if k not in {"tx_id", "src", "dst", "amt_out", "amt_in", "label", "is_self_loop"}}
@@ -75,50 +64,47 @@ def _perturb_with_trace(frame: pd.DataFrame, attempts: list[Attempt], strength: 
                     append.append({**common, "tx_id": second_id, "src": intermediary, "dst": int(row["dst"]),
                         "amt_out": amount_out, "amt_in": amount_in, "label": 1, "is_self_loop": False})
                     generated.extend((first_id, second_id))
-                    attempt_paths.setdefault(int(edge_id), []).append((first_id, second_id))
+                split_edges[edge_id] = generated
                 updated_ids.extend(generated)
             old = attempt_updates[attempt.attempt_id]
-            attempt_updates[attempt.attempt_id] = old.model_copy(update={
-                "edge_ids": updated_ids,
-                "accounts": sorted(set(old.accounts) | intermediaries),
-            })
-            trace.paths_by_attempt[attempt.attempt_id] = attempt_paths
+            attempt_updates[attempt.attempt_id] = old.model_copy(update={"edge_ids": updated_ids,
+                "accounts": sorted(set(old.accounts) | {int(v) for ids in split_edges.values() for v in []})})
+            # Include all newly created intermediaries in this attempt.
+            newly_created = [int(row["dst"]) for row in append if int(row["src"]) in attempt.accounts or int(row["dst"]) in attempt.accounts]
+            attempt_updates[attempt.attempt_id] = attempt_updates[attempt.attempt_id].model_copy(
+                update={"accounts": sorted(set(attempt.accounts) | set(newly_created))})
 
     if strength and kind in ("delays", "combined"):
         max_delay = int(round(strength * 7 * 86400))
-        delayed: set[int] = set()
         for attempt in attempts:
-            # Combined runs must delay the new legs. Spread a single bounded
-            # delay budget over a chronological sequence instead of summing a
-            # fresh maximum delay at every hop.
-            ids = [e for e in attempt_updates[attempt.attempt_id].edge_ids if e not in delayed]
+            ids = [e for e in attempt.edge_ids if e not in split_edges]
             positions = {int(tx): int(ts) for tx, ts in zip(result.tx_id, result.ts, strict=True)}
-            appended_positions = {int(row["tx_id"]): index for index, row in enumerate(append)}
-            positions.update({tx: int(append[index]["ts"]) for tx, index in appended_positions.items()})
-            ordered = sorted((edge for edge in ids if edge in positions), key=lambda edge: (positions[edge], edge))
-            offsets = np.sort(rng.integers(0, max_delay + 1, size=len(ordered))) if ordered and max_delay else np.zeros(len(ordered), dtype=np.int64)
-            for edge_id, offset in zip(ordered, offsets, strict=True):
-                timestamp = positions[edge_id] + int(offset)
-                if edge_id in appended_positions:
-                    append[appended_positions[edge_id]]["ts"] = timestamp
-                else:
-                    result.loc[result.tx_id == edge_id, "ts"] = timestamp
-                delayed.add(edge_id)
+            ordered = sorted(ids, key=lambda edge: (positions.get(edge, attempt.t_start), edge))
+            delay = 0
+            prior = attempt.t_start
+            for edge_id in ordered:
+                extra = int(rng.integers(0, max_delay + 1)) if max_delay else 0
+                current = max(positions.get(edge_id, prior), prior) + extra + delay
+                result.loc[result.tx_id == edge_id, "ts"] = current
+                delay += extra
+                prior = current
 
     if strength and kind in ("decoys", "combined"):
         ring = sorted({int(account) for attempt in attempts for account in attempt.accounts})
         all_accounts = np.union1d(result.src, result.dst)
         normal = np.setdiff1d(all_accounts, np.asarray(ring, dtype=np.int64))
         count = int(np.ceil(strength * max(1, sum(len(a.edge_ids) for a in attempts))))
-        benign = result.loc[(result.label == 0) & result.src.isin(normal) & result.dst.isin(normal)]
-        if len(ring) and len(normal) and not benign.empty:
+        if len(ring) and len(normal):
             for _ in range(count):
-                base = benign.iloc[int(rng.integers(0, len(benign)))].to_dict()
-                source, target = int(rng.choice(ring)), int(base["dst"])
-                if rng.random() < 0.5:
-                    source, target = int(base["src"]), int(rng.choice(ring))
-                append.append({**base, "tx_id": next_tx, "src": source, "dst": target,
-                    "label": 0, "is_self_loop": source == target})
+                source, target = int(rng.choice(ring)), int(rng.choice(normal))
+                base = result.iloc[int(rng.integers(0, len(result)))].to_dict()
+                common = {k: v for k, v in base.items() if k not in {"tx_id", "src", "dst", "amt_out", "amt_in", "label", "is_self_loop"}}
+                noise = float(rng.uniform(1, 1000))
+                append.append({**common, "tx_id": next_tx, "ts": int(rng.choice(result.ts)), "src": source, "dst": target,
+                    "amt_out": noise, "amt_in": noise, "label": 0, "is_self_loop": False})
+                next_tx += 1
+                append.append({**common, "tx_id": next_tx, "ts": int(rng.choice(result.ts)), "src": target, "dst": source,
+                    "amt_out": noise, "amt_in": noise, "label": 0, "is_self_loop": False})
                 next_tx += 1
     if append:
         result = pd.concat([result, pd.DataFrame(append)], ignore_index=True)
@@ -130,20 +116,7 @@ def _perturb_with_trace(frame: pd.DataFrame, attempts: list[Attempt], strength: 
         if valid:
             altered_attempts[i] = attempt.model_copy(update={"t_start": int(positions.loc[valid].min()),
                 "t_end": int(positions.loc[valid].max())})
-    if not trace.paths_by_attempt:
-        present_tx = set(map(int, result.tx_id))
-        trace.paths_by_attempt = {
-            attempt.attempt_id: {int(edge): [(int(edge),)] for edge in attempt.edge_ids if int(edge) in present_tx}
-            for attempt in attempts
-        }
-    return result, altered_attempts, trace
-
-
-def _perturb(frame: pd.DataFrame, attempts: list[Attempt], strength: float, kind: Perturbation,
-             seed: int) -> tuple[pd.DataFrame, list[Attempt]]:
-    """Backward-compatible perturbation interface without provenance output."""
-    changed, altered_attempts, _ = _perturb_with_trace(frame, attempts, strength, kind, seed)
-    return changed, altered_attempts
+    return result, altered_attempts
 
 
 def perturb_transactions(frame: pd.DataFrame, attempts: list[Attempt], strength: float,
@@ -196,51 +169,9 @@ def _recall(attempts: list[Attempt], clusters: list[EvidenceCluster]) -> tuple[f
     return (float(np.mean(edge_hits)) if edge_hits else 0.0, float(np.mean(account_hits)) if account_hits else 0.0)
 
 
-def _period_attempts(attempts: list[Attempt], frame: pd.DataFrame) -> list[Attempt]:
-    """Return an explicit boundary-censored view without changing legacy metrics."""
-    period_ids = set(frame.tx_id.astype(int))
-    endpoints = dict(zip(frame.tx_id.astype(int), zip(frame.src.astype(int), frame.dst.astype(int)), strict=True))
-    scoped: list[Attempt] = []
-    for attempt in attempts:
-        ids = [int(edge) for edge in attempt.edge_ids if int(edge) in period_ids]
-        if not ids:
-            continue
-        accounts = sorted({account for edge in ids for account in endpoints[edge]})
-        scoped.append(attempt.model_copy(update={"edge_ids": ids, "accounts": accounts}))
-    return scoped
-
-
-def _structural_attempt_recall(attempts: list[Attempt], clusters: list[EvidenceCluster],
-                               trace: PerturbationTrace, tau: float) -> float:
-    """Measure complete split-route recovery separately from transformed edge overlap.
-
-    A split original transfer is structurally recovered only when all transaction
-    legs of a generated source-to-destination path occur in the same evidence
-    cluster. Per-attempt coverage averages the recovered route fraction for each
-    original transfer, then applies the configured attempt threshold.
-    """
-    if not attempts:
-        return 0.0
-    recovered: list[bool] = []
-    for attempt in attempts:
-        transfers = trace.paths_by_attempt.get(attempt.attempt_id, {})
-        if not transfers:
-            recovered.append(False)
-            continue
-        transfer_coverages: list[float] = []
-        for paths in transfers.values():
-            if not paths:
-                continue
-            complete = sum(any(set(path).issubset(cluster.edge_ids) for cluster in clusters) for path in paths)
-            transfer_coverages.append(complete / len(paths))
-        recovered.append(bool(transfer_coverages) and float(np.mean(transfer_coverages)) >= tau)
-    return float(np.mean(recovered))
-
-
 def _system_recall(frame: pd.DataFrame, attempts: list[Attempt], settings: Settings, fx: FXModel,
                    banks: dict[int, str], model_path: Path, m8_model_path: Path, cutoff: float,
-                   baseline_config: BaselineConfig, trace: PerturbationTrace,
-                   attempt_tau: float) -> dict[str, float]:
+                   baseline_config: BaselineConfig) -> dict[str, float]:
     node_count = int(max(frame.src.max(), frame.dst.max())) + 1
     graph = build_graph(frame, node_count=node_count)
     hits = _detect_all(graph, settings, fx)
@@ -248,10 +179,6 @@ def _system_recall(frame: pd.DataFrame, attempts: list[Attempt], settings: Setti
     merged = merge_hits(graph, hits, merge_cfg)
     attempt_accounts = {account for attempt in attempts for account in attempt.accounts}
     relevant = [cluster for cluster in merged if attempt_accounts.intersection(cluster.accounts)]
-    candidate_attempt_recall, candidate_account_recall = _recall(attempts, relevant)
-    period_attempts = _period_attempts(attempts, frame)
-    candidate_period_attempt_recall, candidate_period_account_recall = _recall(period_attempts, relevant)
-    candidate_structural_recall = _structural_attempt_recall(attempts, relevant, trace, attempt_tau)
     features_cfg = FeatureConfig(**settings.scoring["features"])
     groups = [c.edge_ids for c in relevant]
     hit_groups = [[hits[i] for i in c.hit_ids] for c in relevant]
@@ -265,34 +192,10 @@ def _system_recall(frame: pd.DataFrame, attempts: list[Attempt], settings: Setti
         scores = probabilities(model, features)
         selected = [cluster for cluster, score in zip(relevant, scores, strict=True) if float(score) >= cutoff]
     else:
-        scores = np.empty(0, dtype=np.float64)
         selected = []
     baseline_result = baseline(graph, baseline_config)
-    main_attempt_recall, main_account_recall = _recall(attempts, selected)
-    main_period_attempt_recall, main_period_account_recall = _recall(period_attempts, selected)
-    main_structural_recall = _structural_attempt_recall(attempts, selected, trace, attempt_tau)
-    baseline_attempt_recall, baseline_account_recall = _recall(attempts, baseline_result.clusters)
-    baseline_period_attempt_recall, baseline_period_account_recall = _recall(period_attempts, baseline_result.clusters)
-    return {
-        "main_attempt_recall": main_attempt_recall,
-        "main_account_recall": main_account_recall,
-        "main_candidate_attempt_recall_before_cutoff": candidate_attempt_recall,
-        "main_candidate_account_recall_before_cutoff": candidate_account_recall,
-        "main_candidate_period_attempt_recall_before_cutoff": candidate_period_attempt_recall,
-        "main_candidate_period_account_recall_before_cutoff": candidate_period_account_recall,
-        "main_structural_attempt_recall_before_cutoff": candidate_structural_recall,
-        "main_structural_attempt_recall": main_structural_recall,
-        "main_period_attempt_recall": main_period_attempt_recall,
-        "main_period_account_recall": main_period_account_recall,
-        "baseline_attempt_recall": baseline_attempt_recall,
-        "baseline_account_recall": baseline_account_recall,
-        "baseline_period_attempt_recall": baseline_period_attempt_recall,
-        "baseline_period_account_recall": baseline_period_account_recall,
-        "candidate_clusters_before_cutoff": float(len(relevant)),
-        "candidate_clusters_above_cutoff": float(len(selected)),
-        "candidate_model_score_max": float(scores.max()) if len(scores) else 0.0,
-        "frozen_cutoff": float(cutoff),
-    }
+    return dict(zip(("main_attempt_recall", "main_account_recall"), _recall(attempts, selected), strict=True)) | \
+        dict(zip(("baseline_attempt_recall", "baseline_account_recall"), _recall(attempts, baseline_result.clusters), strict=True))
 
 
 def run(settings: Settings) -> dict:
@@ -322,23 +225,19 @@ def run(settings: Settings) -> dict:
     strengths = [0.0, 0.25, 0.5, 0.75, 1.0]
     rows: list[dict] = []
     unperturbed_result: dict[str, float] | None = None
-    straddling_attempts = sum(attempt.t_end >= split.validation_end for attempt in attempts)
-    for kind in KINDS:
+    for kind in ("amount_split", "delays", "decoys"):
         for level, strength in enumerate(strengths):
-            changed, changed_attempts, trace = _perturb_with_trace(
-                frame, attempts, float(strength), kind, settings.seed + level)
+            changed, changed_attempts = _perturb(frame, attempts, float(strength), kind, settings.seed + level)
             validate_perturbation(frame, changed, float(strength), kind, attempts)
             if float(strength) == 0 and unperturbed_result is not None:
                 values = unperturbed_result.copy()
             else:
                 values = _system_recall(changed, changed_attempts, settings, fx, banks, model_path,
-                                        m8_model_path, cutoff, baseline_config, trace,
-                                        float(settings.evaluation["attempt_tau"]))
+                                        m8_model_path, cutoff, baseline_config)
                 if float(strength) == 0:
                     unperturbed_result = values.copy()
             rows.append({"kind": kind, "strength": float(strength), **values,
                 "input_edges": len(frame), "perturbed_edges": len(changed), "attempts": len(attempts),
-                "straddling_attempts": straddling_attempts,
                 "seed": settings.seed + level, "frozen_hash": digest})
     if frozen_hash(settings) != digest:
         raise RuntimeError("frozen config or model artifacts changed during evasion evaluation")
@@ -347,17 +246,8 @@ def run(settings: Settings) -> dict:
     pd.DataFrame(rows).to_csv(settings.output_dir / "evasion.csv", index=False)
     (settings.output_dir / "evasion.json").write_text(json.dumps({"command": "aml evasion", "period": "validation",
         "validation_only": True, "frozen_hash": digest, "baseline": baseline_config.model_dump(),
-        "model": str(model_path), "cutoff": cutoff,
-        "metric_notes": {
-            "main_attempt_recall": "legacy exact transformed-edge recall over all start-attributed attempts; retained for comparison",
-            "main_period_attempt_recall": "exact edge recall after censoring expected edge IDs to validation-period rows",
-            "main_structural_attempt_recall_before_cutoff": "for split transfers, fraction of generated source-destination paths whose every leg is in one candidate cluster, evaluated before model cutoff",
-            "candidate_recall_before_cutoff": "detector/cluster recall before XGBoost thresholding; isolates model gate from graph evidence",
-            "straddling_attempts": "attempts assigned by start time whose end is beyond validation; full-edge legacy recall is boundary-censored",
-        }, "straddling_attempt_ids": [attempt.attempt_id for attempt in attempts
-                                      if attempt.t_end >= split.validation_end],
-        "rows": rows}, indent=2) + "\n")
+        "model": str(model_path), "cutoff": cutoff, "rows": rows}, indent=2) + "\n")
     return {"command": "aml evasion", "validation_only": True, "frozen_hash": digest,
         "rows": len(rows), "complete": False,
-        "scope": "amount splitting, delays, benign decoys, and combined perturbations across configured strengths",
+        "scope": "amount splitting, delays, and benign decoys across configured strengths; combined perturbation not run",
         "csv": str(settings.output_dir / "evasion.csv"), "json": str(settings.output_dir / "evasion.json")}

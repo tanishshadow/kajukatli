@@ -32,5 +32,21 @@ def baseline(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tr
     typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
 
 
+@app.command()
+def detect(detector: str = typer.Option("fan"), config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+    """Run an implemented detector over the full prepared timeline."""
+    import json
+    from aml.detect.run import run
+    typer.echo(json.dumps(run(Settings.from_yaml(config), detector), indent=2))
+
+
+@app.command()
+def narrate(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+    """Produce the M4 evidence-backed backend slice from fan hits."""
+    import json
+    from aml.narrative.run import run
+    typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
+
+
 if __name__ == "__main__":
     app()

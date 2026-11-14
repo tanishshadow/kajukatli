@@ -106,8 +106,8 @@ validation; perform validation ablations; use test once after freezing.
 Edge/account labels use period-local transactions. Whole attempts belong to
 their start period, including straddling attempts. Report cluster precision and
 precision@k, not undefined cluster recall or true negatives. Use a fixed account
-population and dependent-block bootstrap for account F1. Exact bootstrap block
-and baseline cluster definitions must be resolved before M3.
+population and dependent-block bootstrap for account F1. The user-approved
+bootstrap and baseline cluster definitions are recorded in `AGENTS.md`.
 
 `risk_score` is model probability times 100. The transparent score lives in
 `evidence.features`; the section 14.1 alert contract is preserved. M12 uses
@@ -196,6 +196,15 @@ period population. Confidence-interval computation remains scheduled for M11.
 M3's measured account F1 is 0.02213 on train and 0.01418 on validation, with
 22,344 validation clusters and precision@20 of zero. This baseline has poor
 precision; the results are reported without test-period tuning.
+
+M4 is in progress: fan detection, the shared train-only FX utility, alert schema,
+and template/evidence construction are implemented and tested. Running
+`.\.venv\Scripts\aml detect --detector fan` produced 329,391 hits in 67.42
+seconds on the full prepared timeline. All 15 currencies connect to the train
+base currency (US Dollar); no fan hits had missing FX. These are raw candidate
+hits, not ranked alerts or a precision claim. Outputs are in `outputs/fan/`.
+No final test evaluation ran. Real alert emission awaits the score-placeholder
+decision because the learned scorer is scheduled for M8. M5–M7 have not started.
 Planning assumes CPU-only execution and one or two people for one or two days;
 the team/time values remain placeholders. Host RAM and loading peak memory are
 measured in the checklist. Stop and report after each milestone.

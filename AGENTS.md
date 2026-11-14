@@ -16,8 +16,9 @@ M13; retain backend README work. M12 uses an offline stub behind `LLMClient` onl
 - Run `pytest -q` before every milestone report and paste the actual summary.
 - Report Built, Tests, Assumptions made, Numbers produced (with commands), and
   Needs from me before the next milestone. State failures and incomplete gates.
-- The user authorized M3 through M7 in one batch. Report and commit each in
-  order, continue between these milestones, and stop after M7.
+- The user authorized completing through M8 without pauses. Report and commit
+  each milestone in order and continue without further confirmation. M4 uses
+  an explicitly marked zero score placeholder; M8 replaces it with model probabilities.
 - Make one small, reviewable Git commit per milestone. Never include raw data.
 - Do not cut scope without telling the user; use section 16's cut order only.
 

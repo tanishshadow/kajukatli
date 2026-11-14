@@ -1,11 +1,13 @@
 # AML Graph
 
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-pytest-informational)](#run-tests)
+[![CI](https://img.shields.io/badge/CI-not%20configured-lightgrey)](#run-tests)
 [![Dataset](https://img.shields.io/badge/dataset-HI--Small%20synthetic-orange)](#dataset)
 [![Status](https://img.shields.io/badge/status-research%20prototype-yellow)](#current-limitations)
 
 AML Graph is a prototype for spotting suspicious patterns across connected bank transfers. It groups transfers into temporal graph patterns, shows the accounts and evidence behind each candidate, and lets you replay the transfer sequence. A flagged result is a **candidate to review**; it does not prove that money laundering happened.
+
+The implemented contribution is a temporal multigraph pipeline that preserves parallel transfers and orders equal-time events by transaction ID, then combines four deterministic pattern detectors with evidence-linked alerts and a learned cluster risk scorer. The interface lets a reviewer inspect the matched transfers and replay their order. This combines established graph-pattern ideas into a reproducible prototype; it is not a claim of a new AML algorithm or validated banking product.
 
 The four detector commands map to these patterns: `fan` detects fan-in (many accounts sending to one account) and fan-out (one account sending to many); `scatter_gather` detects scatter-gather and gather-scatter layering; `cycle` detects time-ordered loops; and `pass_through` detects rapid transfer chains.
 
@@ -80,9 +82,9 @@ Start the combined backend and website:
 aml web --config backend/configs/default.yaml
 ```
 
-Open **http://127.0.0.1:8765/** or go directly to **http://127.0.0.1:8765/investigation.html**. The backend is not hosted because the IBM dataset is large and subject to its license. The live site uses precomputed sample cases; the full pipeline runs locally. On Windows, press `Ctrl+C` in PowerShell to stop the server. To use another port, add `--port 8766`.
+Open **http://127.0.0.1:8765/** or go directly to **http://127.0.0.1:8765/investigation.html**. The backend runs locally; it is not hosted. The full pipeline and case data are available when you prepare the HI-Small dataset and run the detector commands above. On Windows, press `Ctrl+C` in PowerShell to stop the server. To use another port, add `--port 8766`.
 
-The investigation page fetches only the selected case's transactions for the graph, not the full dataset. It shows the accounts, transfers, timing, detector evidence, and dataset labels.
+The investigation page requires the local backend and detector outputs. When you run `aml web`, the backend reads locally prepared transaction files and detector outputs, then fetches only the selected case's transfers for the graph. It does not send the full dataset to your browser. The graph shows accounts, transfers, timing, detector evidence, and benchmark labels.
 
 ## Run tests
 
@@ -95,6 +97,8 @@ pytest -q
 ```powershell
 python -m pytest -q
 ```
+
+There is no automated CI workflow configured yet, so the badge above reports that status instead of implying a passing hosted build. The checks can be run locally with the commands shown here.
 
 ## Evaluation integrity
 

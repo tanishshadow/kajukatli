@@ -27,3 +27,6 @@ venv/
 .env.*
 !.env.example
 AGENTS.md
+ARCHITECTURE.md
+ARCHITECTURE1.md
+STATUS.md

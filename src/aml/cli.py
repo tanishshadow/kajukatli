@@ -48,5 +48,13 @@ def narrate(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tru
     typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
 
 
+@app.command()
+def cluster(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+    """Merge evidence, fit train-only models, and export ranked alerts."""
+    import json
+    from aml.score.run import run
+    typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
+
+
 if __name__ == "__main__":
     app()

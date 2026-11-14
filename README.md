@@ -7,17 +7,18 @@ Networks**, Build Beyond'26 PS 2.1. The specification is
 
 M1 implements compact loading, exact pattern membership, period-local labels,
 temporal splits, and the data checklist. M2 adds the validated temporal graph
-and CSR indexes. No detectors or model evaluations exist
-yet. M4 will produce a backend fan-detection slice and alerts JSON. Frontend work
-and M13 are excluded.
+and CSR indexes. M3–M7 add the baseline, evaluation harness, six temporal
+typologies, FX, and evidence-backed alerts. M8 adds guarded clustering and
+train-only account/cluster scoring. Final tuning and test evaluation remain
+M9–M11 work. Frontend work and M13 are excluded.
 
 ## Environment
 
 The user authorized the existing **Python 3.13.7** instead of installing the
 architecture's Python 3.11. No interpreter was installed. The project `.venv`
-uses that interpreter and existing system packages. M1 dependencies are present;
-Numba is not installed and will be needed before the search-detector milestones.
-Compatibility of future milestones is not yet established.
+uses that interpreter and existing system packages. Numba 0.68.1 and llvmlite
+0.50.0 were installed into the project environment for the compiled searches.
+XGBoost 3.4.1 is available for M8. No new Python interpreter was installed.
 
 The environment was created and the local package installed without downloading
 dependencies:
@@ -197,14 +198,50 @@ M3's measured account F1 is 0.02213 on train and 0.01418 on validation, with
 22,344 validation clusters and precision@20 of zero. This baseline has poor
 precision; the results are reported without test-period tuning.
 
-M4 is in progress: fan detection, the shared train-only FX utility, alert schema,
+M4 is complete: fan detection, the shared train-only FX utility, alert schema,
 and template/evidence construction are implemented and tested. Running
 `.\.venv\Scripts\aml detect --detector fan` produced 329,391 hits in 67.42
 seconds on the full prepared timeline. All 15 currencies connect to the train
 base currency (US Dollar); no fan hits had missing FX. These are raw candidate
 hits, not ranked alerts or a precision claim. Outputs are in `outputs/fan/`.
-No final test evaluation ran. Real alert emission awaits the score-placeholder
-decision because the learned scorer is scheduled for M8. M5–M7 have not started.
+`aml narrate` produced the M4 slice in `outputs/m4/alerts.json` with an explicit
+unavailable-score marker. M8 replaces that placeholder in `outputs/alerts.json`.
+
+M5 implements direct scatter-gather and aggregate gather-scatter with overlapping
+stages, causal paths, and amount checks. Both inner searches use Numba after the
+initial Python implementation proved too slow on the full timeline. No fan hits
+are used as a prerequisite. Rolling counters, prefix sums and a monotone maximum
+queue avoid repeatedly rescanning gather windows; an independent brute-force
+oracle tests equivalence. `aml detect --detector scatter_gather` produced 10,681
+hits in 15.89 seconds on HI-Small. The default amount ratio interval is [0.8, 1.1].
+
+M6 implements earliest-edge anchored cycle DFS, overlapping-window SCC
+prefiltering, amount pruning during traversal, and logged degree/expansion caps.
+`aml detect --detector cycle` produced 20 candidates in 10.53 seconds. No labeled
+positive edges were excluded by the degree cap in that run. This does not
+establish detector recall. The configured maximum cycle length is 10.
+
+M7 implements received-to-paid pass-through links, closest-time/amount top-3
+matching, DP-pruned maximal paths, and a cap of 100 paths per weak link component.
+`aml detect --detector pass_through` produced 67,790 candidates in 21.05 seconds.
+Its log records 31,197 top-match truncations and 26 component path-cap events.
+These truncations can hide valid evidence; they are not silent performance wins.
+
+M8 fits class-weighted, fixed-seed XGBoost account and cluster models using only
+train-period labels and features. Account and cluster versions share feature
+code. Training recomputes degrees, activity and cluster composition on a train
+graph; fully contained train hits are used. Ranking runs on the full timeline.
+`risk_score` is the cluster model probability times 100. Top features are native
+model log-odds contributions. The transparent 0–100 score is separately dampened
+for steady activity; the learned models receive activity/regularity features.
+The model probabilities are not claimed to be calibrated real-world AML risk.
+
+Run `.\.venv\Scripts\aml cluster` after the four detector commands. Both models,
+the complete ranked cluster list and feature table are retained in `outputs/m8/`.
+Only the frontend JSON export is limited to the configured top 100; this cap is
+logged and is not an evaluation cutoff. M9 still selects a cutoff on validation,
+tunes parameters and freezes them. M11 still performs the one final test
+evaluation and confidence intervals. No test-period metrics have been computed.
 Planning assumes CPU-only execution and one or two people for one or two days;
 the team/time values remain placeholders. Host RAM and loading peak memory are
-measured in the checklist. Stop and report after each milestone.
+measured in the checklist. The user authorized completing through M8 without pauses.

@@ -65,6 +65,8 @@ detectors:
     max_paths_per_component: 100
   merge:
     window_seconds: 79920
+    hub_degree: 100
+    max_accounts: 100
   baseline:
     window_seconds: 318180
   dampening:
@@ -72,3 +74,19 @@ detectors:
     bins: 6
     active_bin_fraction: 0.8
     maximum_count_cv: 0.5
+scoring:
+  features:
+    size_bins: [3, 5, 10]
+    regularity_bins: 6
+  model:
+    n_estimators: 100
+    max_depth: 4
+    learning_rate: 0.1
+    n_jobs: 2
+  risk:
+    weights: {fan_out: 10, fan_in: 10, scatter_gather: 20, gather_scatter: 20, cycle: 30, pass_through: 20}
+    active_bin_fraction: 0.8
+    maximum_count_cv: 0.5
+    steady_activity_factor: 0.5
+    top_features: 5
+    export_limit: 100

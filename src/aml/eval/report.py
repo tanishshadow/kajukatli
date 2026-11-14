@@ -23,6 +23,7 @@ def run(settings: Settings) -> dict:
     test_ids = set(graph.tx_id[test_mask].tolist())
     y, scores = [], []
     edges = []
+    alerted_test_edges: set[int] = set()
     account_score = np.zeros(graph.node_count)
     for row in ranked:
         ids = [int(tx) for tx in row["edge_ids"] if int(tx) in test_ids]
@@ -31,6 +32,8 @@ def run(settings: Settings) -> dict:
         positions = graph.positions_for_tx_ids(np.array(ids))
         y.append(int(graph.label[positions].mean() >= settings.evaluation["cluster_tau"]))
         scores.append(float(row["model_probability"]))
+        if float(row["model_probability"]) >= cutoff:
+            alerted_test_edges.update(ids)
         nodes = np.union1d(graph.src[positions], graph.dst[positions])
         np.maximum.at(account_score, nodes, float(row["model_probability"]))
         edges.extend((int(graph.src[p]), int(graph.dst[p])) for p in positions)
@@ -44,6 +47,16 @@ def run(settings: Settings) -> dict:
     from aml.data.patterns_parser import Attempt
     attempts = [Attempt.model_validate({k:r[k] for k in Attempt.model_fields}) for r in pattern_rows
                 if split.validation_end <= r["t_start"] < split.end]
+    supported = {"FAN-OUT", "FAN-IN", "SCATTER-GATHER", "GATHER-SCATTER", "CYCLE", "STACK"}
+    by_typology: dict[str, list[Attempt]] = {}
+    for attempt in attempts:
+        by_typology.setdefault(attempt.typology.upper(), []).append(attempt)
+    attempt_recall = {}
+    for typology, members in sorted(by_typology.items()):
+        detected = sum(len(alerted_test_edges.intersection(a.edge_ids)) / max(1, len(a.edge_ids)) >= 0.5 for a in members)
+        attempt_recall[typology] = {"status": "covered" if typology in supported else "not covered",
+            "attempts": len(members), "detected": int(detected) if typology in supported else None,
+            "recall": detected / len(members) if typology in supported and members else None}
     blocks = dependent_blocks(population, attempts, edges)
     ci = bootstrap_account_f1(population, account_truth, account_prediction, blocks,
         replicates=settings.evaluation["bootstrap_replicates"], seed=settings.seed,
@@ -52,7 +65,8 @@ def run(settings: Settings) -> dict:
         "cluster": cluster_metrics.model_dump(), "account": account_metrics.model_dump(),
         "account_f1_block_bootstrap": ci, "test_transactions": int(test_mask.sum()),
         "positive_test_transactions": int(graph.label[test_mask].sum()),
-        "attempts_by_start_period": len(attempts), "test_access_in_tuning": False}
+        "attempts_by_start_period": len(attempts), "attempt_recall_edge_coverage_tau_0_5": attempt_recall,
+        "test_access_in_tuning": False}
     output = settings.output_dir / "m11"
     output.mkdir(parents=True, exist_ok=True)
     (output / "final_report.json").write_text(json.dumps(report, indent=2))

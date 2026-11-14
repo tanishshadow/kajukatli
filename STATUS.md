@@ -1,5 +1,6 @@
 # Backend continuation status
 
-- Step 0: frozen artifact hash guard, exploratory report archive and disclosure; 1 focused test passed. Remaining: M10, M11 final one-shot run, M12 confirmation.
+- Step 0: guard, two exploratory outputs archived, and disclosure. Audit: YES, post-report working-tree diff from `08d956c` changed tuning/evasion config and score report serialization; no later detector source commit is in history. Earlier report files had no frozen hash for direct comparison.
 - Step B / M10: REDUCED, NOT COMPLETE. Amount splitting only at strengths 0 and 1.0; real validation graph, detector/model, and baseline reruns wrote `outputs/evasion.csv` and `.json`. Delays and decoys remain. `pytest -q`: 72 passed in 18.95s (elevated command). Main recall was 0.0 at both strengths; baseline attempt recall was 0.2632 then 1.0. Next: minimal M11 attempt recall, M12 fallback, then one final test report.
 - Step D / M12: reduced offline-only fallback done; invalid LLM output restores the template and writes failure count/rate to `outputs/narrative_stats.json`. `pytest -q tests/planted/test_narrative.py`: 6 passed in 0.94s. No provider is configured.
+- Step C / M11: REDUCED. One `aml report` final test invocation completed with frozen hash `ed91b49f7d6ca740c3f293ff033a1c1a00c10d3f8e635d1ceb39dc2191ea0c7e`; it reports edge-coverage attempt recall at tau 0.5 by typology. Sensitivity tables, baseline clustering, difference CI, and straddler list are not done. Output: `outputs/m11/final_report.json` and `.md`.

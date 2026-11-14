@@ -1,11 +1,14 @@
 # AML Graph backend
 
 **Test-period disclosure:** `aml report` was invoked twice before the one-shot
-guard was added; those reports are archived as exploratory outputs. Detector
-and scoring code changed afterward in uncommitted work (including the M8 report
-serialization path), and the tuning configuration also changed. The reports
-therefore are not a valid final result. The new frozen hash guard is intended to
-protect the next final run; a final run must occur only after M10/M12 freeze.
+guard was added; those reports are archived as exploratory outputs. After the
+first report, the working tree diff from commit `08d956c` added
+`scoring.tuning_grid` and `evasion.strengths` in `configs/default.yaml`, and
+changed score report serialization in `src/aml/score/run.py`. No later detector
+source commit appears in `git log` after `08d956c`. The exploratory JSON files
+contain no frozen hash, so a before/after hash comparison is unavailable. The
+final one-shot report used frozen hash
+`ed91b49f7d6ca740c3f293ff033a1c1a00c10d3f8e635d1ceb39dc2191ea0c7e`.
 
 Backend implementation of **Graph-Based Detection of Layered Money Laundering
 Networks**, Build Beyond'26 PS 2.1. The specification is

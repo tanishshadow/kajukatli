@@ -15,8 +15,8 @@ laundering happened.
 
 ## Run the website on Windows
 
-The backend serves the website too, so there is no separate frontend install
-or start command. Run these commands in PowerShell from the project folder.
+The existing `aml web` command starts the backend and serves the frontend pages
+together. There is no separate frontend server or Node.js install.
 
 ### 1. Set up Python packages
 
@@ -25,6 +25,7 @@ installation. If `.venv` does not exist yet, create it using the Python already
 installed on your computer. Use the version you have:
 
 ```powershell
+cd C:\Users\tanis\Documents\pyinter
 py -3.13 -m venv .venv
 # Or, if you have Python 3.12 instead:
 # py -3.12 -m venv .venv
@@ -64,15 +65,18 @@ Run each detector once to create the cases shown in the investigation page:
 
 ### 4. Start the website and backend
 
+In PowerShell, go to the project folder and start the combined server:
+
 ```powershell
+cd C:\Users\tanis\Documents\pyinter
 .\.venv\Scripts\aml web --config backend/configs/default.yaml
 ```
 
 Open **http://127.0.0.1:8765/** for the website, or go directly to
 **http://127.0.0.1:8765/investigation.html** to explore detector cases. Keep
-the PowerShell window open while using the site. Press `Ctrl+C` in that window
-to stop it. If port 8765 is already in use, add `--port 8766` and open the URL
-with `8766` instead.
+the PowerShell window open while using the site. Press `Ctrl+C` to stop the
+server. If port 8765 is already in use, add `--port 8766` and use that port in
+the browser address.
 
 The investigation page loads a list of real cases from the detector results.
 When you choose one, the backend fetches only that case's transactions for the

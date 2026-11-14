@@ -1,7 +1,7 @@
 # AML Graph
 
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue)](https://www.python.org/)
-[![CI](https://img.shields.io/badge/CI-not%20configured-lightgrey)](#run-tests)
+[![CI](https://github.com/tanishshadow/kajukatli/actions/workflows/ci.yml/badge.svg)](https://github.com/tanishshadow/kajukatli/actions/workflows/ci.yml)
 [![Dataset](https://img.shields.io/badge/dataset-HI--Small%20synthetic-orange)](#dataset)
 [![Status](https://img.shields.io/badge/status-research%20prototype-yellow)](#current-limitations)
 
@@ -17,16 +17,7 @@ The four detector commands map to these patterns: `fan` detects fan-in (many acc
 
 Final test results on the HI-Small synthetic benchmark. Account metrics are the overall graph-system result; attempt recall is reported per benchmark pattern at 50% edge coverage. “Not covered” means the current detectors do not evaluate that typology.
 
-<!-- | Scope | Precision | Recall | F1 / attempt recall |
-|---|---:|---:|---:|
-| Overall account | 10.9% | 24.8% | F1 15.1% |
-| Cycle attempts (5/10) | — | — | 50.0% |
-| Fan-in attempts (2/12) | — | — | 16.7% |
-| Fan-out attempts (0/10) | — | — | 0.0% |
-| Gather-scatter attempts (0/16) | — | — | 0.0% |
-| Scatter-gather attempts (9/11) | — | — | 81.8% |
-| Stack attempts (0/7) | — | — | 0.0% |
-| Bipartite (17 attempts), Random (12 attempts) | — | — | Not covered | -->
+
 
 The test contained 1,015,882 transactions, including 1,798 labeled positive transactions, and 95 attempts starting in the test period. These are synthetic benchmark results, not evidence of real-world effectiveness. The investigation replay below shows the kind of evidence the prototype presents for a candidate.
 
@@ -98,7 +89,7 @@ pytest -q
 python -m pytest -q
 ```
 
-There is no automated CI workflow configured yet, so the badge above reports that status instead of implying a passing hosted build. The checks can be run locally with the commands shown here.
+Tests run automatically on GitHub Actions and do not require the dataset.
 
 ## Evaluation integrity
 

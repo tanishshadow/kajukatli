@@ -6,7 +6,8 @@ Networks**, Build Beyond'26 PS 2.1. The specification is
 [AGENTS.md](AGENTS.md).
 
 M1 implements compact loading, exact pattern membership, period-local labels,
-temporal splits, and the data checklist. No detectors or model evaluations exist
+temporal splits, and the data checklist. M2 adds the validated temporal graph
+and CSR indexes. No detectors or model evaluations exist
 yet. M4 will produce a backend fan-detection slice and alerts JSON. Frontend work
 and M13 are excluded.
 
@@ -112,6 +113,37 @@ and baseline cluster definitions must be resolved before M3.
 `evidence.features`; the section 14.1 alert contract is preserved. M12 uses
 templates and an offline `LLMClient` stub; no provider key is required.
 
+## M2 temporal graph
+
+Build and validate the entire prepared graph without opening raw files:
+
+```powershell
+.\.venv\Scripts\python -m aml.graph.build
+```
+
+The command writes `outputs/m2/graph_report.json`. The measured full-data run
+contained 515,088 nodes and 5,078,345 edges, including all 5,177 positive edges
+and 591,212 self-loops. Build plus validation took 3.99 seconds, with a process
+peak working set of 1,265,618,944 bytes. Persistent NumPy arrays occupy
+363,725,574 bytes; this excludes transient construction buffers, Python object
+overhead, and vocabulary strings. Timing and memory are local-run observations.
+
+`aml.graph.build.load_graph(transactions_path, accounts_path)` returns a
+Pydantic-validated `TemporalGraph`. All edge arrays are sorted by `(ts, tx_id)`.
+`graph.out_idx[node]` and `graph.in_idx[node]` expose CSR slices sorted in the
+same total order. Parallel edges and self-loops remain distinct; isolated nodes
+from the account map remain addressable. Arrays are contiguous and read-only.
+
+CSR edge IDs are **positions in the sorted arrays**, not original transaction
+IDs. Use `graph.positions_for_tx_ids(ids)` to resolve pattern membership and
+`graph.tx_id[positions]` to recover evidence IDs. Currency columns share one
+alphabetically sorted int32 vocabulary (`currency_names`); payment formats
+have a separate vocabulary (`format_names`). No FX conversion is performed yet.
+
+Graph construction validates both complete CSR permutations, node ownership,
+temporal order, transaction lookup, types, labels, amounts, and self-loop flags.
+The graph is rebuilt in memory from Parquet; only its audit report is persisted.
+
 ## Dataset citation and license
 
 Erik Altman, Jovan Blanuša, Luc von Niederhäusern, Beni Egressy, Andreea Anghel,
@@ -145,7 +177,8 @@ them as established facts. No reference code has been copied.
 
 ## Milestone status
 
-M0: committed scaffold. M1: preparation and checklist; M2 has not started.
+M0: committed scaffold. M1: preparation and checklist. M2: temporal graph and
+CSR indexes, with 34 passing tests across M1/M2. M3 has not started.
 Planning assumes CPU-only execution and one or two people for one or two days;
 the team/time values remain placeholders. Host RAM and loading peak memory are
 measured in the checklist. Stop and report after each milestone.

@@ -12,7 +12,7 @@ The four detector commands map to these patterns: `fan` detects fan-in (many acc
 ## Clone and install
 
 ```bash
-git clone <repository-url> kajukatli
+git clone <https://github.com/tanishshadow/kajukatli> kajukatli
 cd kajukatli
 python3 -m venv .venv
 source .venv/bin/activate
@@ -20,7 +20,7 @@ pip install -e .
 ```
 
 ```powershell
-git clone <repository-url> kajukatli
+git clone <https://github.com/tanishshadow/kajukatli> kajukatli
 cd kajukatli
 py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1

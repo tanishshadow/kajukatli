@@ -33,9 +33,13 @@ the Python backend. From the repository root, run:
 
 Then open `http://127.0.0.1:8765/`. The overview, approach, detector, and
 evaluation pages read generated summaries from `outputs/`; missing artifacts
-show an empty/offline state. The API returns aggregate counts and metrics only,
-not transaction rows or account identifiers. The server does not start detector
-jobs or rerun the one-shot test report.
+show an empty/offline state. Open `http://127.0.0.1:8765/investigation.html`
+to browse real detector hits and inspect their matched transaction subgraphs.
+The investigation API paginates hit summaries and returns transaction details
+only for the selected hit's edge IDs; it does not send the full dataset to the
+browser. The same `aml web` command serves both the frontend and its read-only
+JSON API, so do not open the HTML directly as a `file://` URL. The server does
+not start detector jobs or rerun the one-shot test report.
 
 ## Environment
 

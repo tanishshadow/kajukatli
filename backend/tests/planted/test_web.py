@@ -7,6 +7,7 @@ from http.server import ThreadingHTTPServer
 
 from aml.config import Settings
 from aml.web import api_data, make_handler
+import pandas as pd
 
 
 def put_json(path: Path, value: object) -> None:
@@ -63,3 +64,34 @@ def test_web_server_serves_page_and_same_origin_api(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+def test_investigation_api_returns_real_hit_summaries_and_exact_subgraph(tmp_path):
+    settings = Settings(output_dir=tmp_path / "outputs", data={"processed_dir": tmp_path / "processed"},
+        detectors={"fan": {"k": 2}})
+    settings.data.processed_dir.mkdir(parents=True)
+    hits = [
+        {"typology": "fan_in", "accounts": [1, 2, 3], "edge_ids": [10, 11],
+         "t_start": 100, "t_end": 200, "total_value": 75.0,
+         "meta": {"hub": 1, "distinct_counterparties": 2, "value_currency": "USD", "fx_missing": False}},
+        {"typology": "fan_out", "accounts": [1, 4], "edge_ids": [12],
+         "t_start": 300, "t_end": 300, "total_value": 12.0, "meta": {"hub": 1}},
+    ]
+    path = settings.output_dir / "fan" / "hits.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("[\n" + ",\n".join(json.dumps(hit) for hit in hits) + "\n]\n", encoding="utf-8")
+    pd.DataFrame({"tx_id": [10, 11, 12, 99], "ts": [200, 100, 300, 150],
+        "src": [2, 3, 1, 8], "dst": [1, 1, 4, 9], "amt_out": [25., 50., 12., 1.],
+        "cur_out": ["USD"] * 4, "label": [1, 0, 1, 0]}).to_parquet(settings.data.processed_dir / "transactions.parquet")
+    pd.DataFrame({"account_id": [1, 2, 3, 4, 8, 9], "bank": ["A", "B", "C", "D", "X", "Y"]}).to_parquet(settings.data.processed_dir / "accounts.parquet")
+
+    cases = api_data("investigation/cases", settings, {"detector": ["fan"], "offset": ["0"], "limit": ["1"]})
+    assert cases["total"] == 2 and cases["has_more"] is True
+    assert cases["cases"][0]["edge_count"] == 2
+    subgraph = api_data("investigation/case", settings, {"detector": ["fan"], "id": ["0"]})
+    assert {edge["id"] for edge in subgraph["edges"]} == {10, 11}
+    assert [(edge["src"], edge["dst"]) for edge in subgraph["edges"]] == [(3, 1), (2, 1)]
+    assert "2 distinct counterparties" in subgraph["conditions"][0]
+    assert [node["id"] for node in subgraph["nodes"]] == [1, 2, 3]
+    assert set(subgraph["currencies"]) == {"USD"}
+    assert all(edge["id"] != 99 for edge in subgraph["edges"])

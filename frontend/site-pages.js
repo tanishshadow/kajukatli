@@ -27,7 +27,7 @@
   } else targets.forEach(target => target.classList.add('is-visible'));
 
   const page = document.body.dataset.page;
-  if (page) {
+  if (page && page !== 'investigation') {
     fetch(`/api/${page}`, { headers: { Accept: 'application/json' } })
       .then(response => { if (!response.ok) throw new Error('Backend data is not available'); return response.json(); })
       .then(data => renderPageData(page, data))

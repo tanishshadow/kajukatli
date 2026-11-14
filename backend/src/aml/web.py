@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import json
 import mimetypes
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,121 @@ from urllib.parse import urlparse
 from aml.config import Settings
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-FRONTEND_FILES = {"index.html", "approach.html", "patterns.html", "evaluation.html", "site-pages.css", "site-pages.js", "README.md"}
+FRONTEND_FILES = {"index.html", "approach.html", "patterns.html", "evaluation.html", "investigation.html", "site-pages.css", "site-pages.js", "investigation.css", "investigation.js", "README.md"}
+
+_DETECTORS = {
+    "fan": ("fan", "Fan in / fan out", {"fan_in", "fan_out"}),
+    "scatter": ("scatter_gather", "Scatter & gather", {"scatter_gather", "gather_scatter"}),
+    "cycle": ("cycle", "Time-respecting cycles", {"cycle"}),
+    "pass": ("pass_through", "Rapid pass-through", {"pass_through"}),
+}
+
+
+def _hit_rows(path: Path):
+    """Yield individual JSON array items; hit files can be hundreds of MB."""
+    try:
+        with path.open(encoding="utf-8") as stream:
+            for line in stream:
+                line = line.strip().rstrip(",")
+                if not line or line in {"[", "]"}:
+                    continue
+                try:
+                    value = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(value, dict):
+                    yield value
+    except OSError:
+        return
+
+
+def _investigation(endpoint: str, query: dict[str, list[str]], settings: Settings) -> dict[str, Any] | None:
+    import pyarrow.dataset as ds
+
+    if endpoint == "investigation/detectors":
+        return {"detectors": [{"id": key, "label": label,
+            "available": (settings.output_dir / folder / "hits.json").is_file(),
+            "hit_count": int((_read_json(settings.output_dir / folder / "report.json") or {}).get("hits", 0))}
+            for key, (folder, label, _) in _DETECTORS.items()]}
+    if endpoint == "investigation/cases":
+        detector = query.get("detector", [""])[0]
+        if detector not in _DETECTORS:
+            return {"error": "unknown detector", "cases": [], "total": 0}
+        offset = max(0, int(query.get("offset", ["0"])[0]))
+        limit = min(100, max(1, int(query.get("limit", ["30"])[0])))
+        folder, _, typologies = _DETECTORS[detector]
+        rows = []
+        total = 0
+        for raw_index, hit in enumerate(_hit_rows(settings.output_dir / folder / "hits.json")):
+            if hit.get("typology") not in typologies:
+                continue
+            if total >= offset and len(rows) < limit:
+                rows.append({"id": raw_index, "typology": hit["typology"],
+                    "edge_count": len(hit.get("edge_ids", [])), "account_count": len(hit.get("accounts", [])),
+                    "t_start": hit.get("t_start"), "t_end": hit.get("t_end"),
+                    "total_value": hit.get("total_value"), "currency": hit.get("meta", {}).get("value_currency"),
+                    "meta": hit.get("meta", {})})
+            total += 1
+        return {"detector": detector, "cases": rows, "offset": offset, "limit": limit, "total": total,
+            "has_more": offset + len(rows) < total}
+    if endpoint == "investigation/case":
+        detector = query.get("detector", [""])[0]
+        if detector not in _DETECTORS:
+            return {"error": "unknown detector"}
+        case_id = int(query.get("id", ["-1"])[0])
+        folder, _, _ = _DETECTORS[detector]
+        hit = next((row for index, row in enumerate(_hit_rows(settings.output_dir / folder / "hits.json")) if index == case_id), None)
+        if hit is None:
+            return {"error": "case not found"}
+        edge_ids = [int(value) for value in hit.get("edge_ids", [])]
+        max_edges = 5000
+        omitted = max(0, len(edge_ids) - max_edges)
+        edge_ids = edge_ids[:max_edges]
+        tx_path = settings.data.processed_dir / "transactions.parquet"
+        account_path = settings.data.processed_dir / "accounts.parquet"
+        if not tx_path.is_file() or not account_path.is_file():
+            return {"error": "processed transaction/account Parquet is missing; run aml prepare first"}
+        tx = ds.dataset(tx_path, format="parquet").to_table(
+            columns=["tx_id", "ts", "src", "dst", "amt_out", "cur_out", "label"],
+            filter=ds.field("tx_id").isin(edge_ids)).to_pydict()
+        order = sorted(range(len(tx["tx_id"])), key=lambda i: (tx["ts"][i], tx["tx_id"][i]))
+        accounts = [int(value) for value in hit.get("accounts", [])]
+        account_rows = ds.dataset(account_path, format="parquet").to_table(
+            columns=["account_id", "bank"], filter=ds.field("account_id").isin(accounts)).to_pydict()
+        banks = dict(zip(account_rows["account_id"], account_rows["bank"]))
+        currencies = sorted({str(tx["cur_out"][i]) for i in order})
+        actual_edges = [{"id": int(tx["tx_id"][i]), "src": int(tx["src"][i]), "dst": int(tx["dst"][i]),
+            "amount": float(tx["amt_out"][i]), "currency": str(tx["cur_out"][i]),
+            "ts": int(tx["ts"][i]), "label": int(tx["label"][i])} for i in order]
+        config_key = {"fan": "fan", "scatter": "scatter_gather", "cycle": "cycle", "pass": "pass_through"}[detector]
+        cfg = settings.detectors.get(config_key, {})
+        meta = hit.get("meta", {})
+        conditions: list[str] = []
+        if detector == "fan":
+            conditions.append(f"Hub {meta.get('hub')} connects {meta.get('distinct_counterparties')} distinct counterparties; configured minimum is {cfg.get('k')} within {meta.get('window_seconds')} seconds.")
+        elif detector == "scatter":
+            stages = meta.get("stages", {})
+            placement, integration = stages.get("placement", []), stages.get("integration", [])
+            if hit.get("typology") == "gather_scatter":
+                hub = meta.get("hub")
+                incoming = [edge for edge in actual_edges if edge["dst"] == hub]
+                outgoing = [edge for edge in actual_edges if edge["src"] == hub]
+                conditions.append(f"Hub {hub} matched {len({edge['src'] for edge in incoming})} distinct incoming sources (minimum {cfg.get('m_in')}) and {len({edge['dst'] for edge in outgoing})} distinct outgoing destinations (minimum {cfg.get('m_out')}).")
+            else:
+                conditions.append(f"Direct paths link source {meta.get('source')} to sink {meta.get('sink')} through {len(meta.get('middle_accounts', []))} distinct middle accounts (minimum {cfg.get('m')}).")
+            conditions.append(f"Detector window is {cfg.get('window_seconds')} seconds; matched placement/integration stages contain {len(placement)}/{len(integration)} transfers. Configured FX amount ratio is [{cfg.get('rho_lo')}, {1 + float(cfg.get('eps', 0))}].")
+        elif detector == "cycle":
+            conditions.append(f"Time-ordered cycle length {meta.get('length', len(edge_ids))} is within the configured maximum {cfg.get('max_length')}; candidate span is {hit.get('t_end', 0) - hit.get('t_start', 0)} seconds (window {cfg.get('window_seconds')}).")
+            conditions.append(f"Each comparable FX-normalized hop is checked against ratio [{cfg.get('rho_lo')}, {1 + float(cfg.get('eps', 0))}]; fx_missing={bool(meta.get('fx_missing'))}.")
+        else:
+            conditions.append(f"Matched path contains {meta.get('links')} links (configured minimum {cfg.get('min_links')}) with {meta.get('likely_mules', [])} as intermediate accounts; maximum dwell per hop is {cfg.get('dwell_seconds')} seconds.")
+            conditions.append(f"Comparable FX-normalized hop ratios are bounded by [{cfg.get('rho_lo')}, {1 + float(cfg.get('eps', 0))}]; fx_missing={bool(meta.get('fx_missing'))}.")
+        if meta.get("fx_missing"):
+            conditions.append("At least one FX conversion was unavailable; the detector marks the amount comparison as skipped for that hop.")
+        return {"detector": detector, "case": {"id": case_id, **hit, "omitted_edges": omitted},
+            "nodes": [{"id": account, "bank": banks.get(account)} for account in accounts],
+            "edges": actual_edges, "conditions": conditions, "currencies": currencies}
+    return None
 
 
 def _read_json(path: Path) -> dict[str, Any] | list[Any] | None:
@@ -40,8 +155,13 @@ def _compact_pattern_data(settings: Settings) -> list[dict[str, Any]]:
     return result
 
 
-def api_data(endpoint: str, settings: Settings) -> dict[str, Any] | None:
+def api_data(endpoint: str, settings: Settings, query: dict[str, list[str]] | None = None) -> dict[str, Any] | None:
     """Return safe, summary-only page data; never returns raw transactions/accounts."""
+    if endpoint.startswith("investigation/"):
+        try:
+            return _investigation(endpoint, query or {}, settings)
+        except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
+            return {"error": f"investigation data unavailable: {exc}"}
     checklist = _read_json(settings.output_dir / "m1" / "checklist.json")
     checklist = checklist if isinstance(checklist, dict) else {}
     final = _read_json(settings.output_dir / "m11" / "final_report.json")
@@ -99,9 +219,10 @@ def make_handler(settings: Settings, frontend_dir: Path = PROJECT_ROOT / "fronte
             self.wfile.write(body)
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
-            route = urlparse(self.path).path
+            parsed = urlparse(self.path)
+            route = parsed.path
             if route.startswith("/api/"):
-                value = api_data(route.removeprefix("/api/"), settings)
+                value = api_data(route.removeprefix("/api/"), settings, urllib.parse.parse_qs(parsed.query))
                 if value is None:
                     self._send(404, b'{"error":"unknown endpoint"}', "application/json; charset=utf-8")
                 else:

@@ -9,7 +9,7 @@ AML Graph is a prototype for spotting suspicious patterns across connected bank 
 
 The four detector commands map to these patterns: `fan` detects fan-in (many accounts sending to one account) and fan-out (one account sending to many); `scatter_gather` detects scatter-gather and gather-scatter layering; `cycle` detects time-ordered loops; and `pass_through` detects rapid transfer chains.
 
-![AML Graph investigation page showing a detected transaction pattern](docs/img/investigation.gif)
+![AML Graph investigation page showing a detected transaction pattern](./docs/img/investigation.gif)
 
 ## Results
 
@@ -28,7 +28,7 @@ Final test results on the HI-Small synthetic benchmark. Account metrics are the 
 
 The test contained 1,015,882 transactions, including 1,798 labeled positive transactions, and 95 attempts starting in the test period. These are synthetic benchmark results, not evidence of real-world effectiveness. The investigation replay below shows the kind of evidence the prototype presents for a candidate.
 
-![Replay of an investigated transaction pattern](docs/img/replay.gif)
+![Replay of an investigated transaction pattern](./docs/img/replay.gif)
 
 ## Clone and install
 

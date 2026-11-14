@@ -65,7 +65,11 @@
     }
     if (name === 'evaluation') {
       set('[data-value="account-f1"]', percent(data.account_f1));
+      set('[data-value="account-precision"]', percent(data.account_precision));
       set('[data-value="account-recall"]', percent(data.account_recall));
+      set('[data-value="baseline-f1"]', percent(data.baseline_validation?.f1));
+      set('[data-value="baseline-precision"]', percent(data.baseline_validation?.precision));
+      set('[data-value="baseline-recall"]', percent(data.baseline_validation?.recall));
       set('[data-value="attempt-count"]', format(data.attempts));
       set('[data-value="test-edges"]', format(data.test_transactions));
       set('[data-value="positive-edges"]', format(data.positive_test_transactions));

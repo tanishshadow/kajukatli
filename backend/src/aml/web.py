@@ -185,6 +185,9 @@ def api_data(endpoint: str, settings: Settings, query: dict[str, list[str]] | No
         return {"patterns": _compact_pattern_data(settings)}
     if endpoint == "evaluation":
         account = final.get("account", {}) if final else {}
+        baseline = _read_json(settings.output_dir / "m3" / "baseline.json")
+        baseline = baseline if isinstance(baseline, dict) else {}
+        validation_baseline = baseline.get("metrics", {}).get("validation", {}).get("account", {})
         evasion: list[dict[str, Any]] = []
         curve_path = settings.output_dir / "evasion.csv"
         if curve_path.is_file():
@@ -199,6 +202,10 @@ def api_data(endpoint: str, settings: Settings, query: dict[str, list[str]] | No
                 evasion = []
         return {"available": final is not None,
             "account_f1": account.get("f1"), "account_recall": account.get("recall"),
+            "account_precision": account.get("precision"),
+            "baseline_validation": {"precision": validation_baseline.get("precision"),
+                "recall": validation_baseline.get("recall"), "f1": validation_baseline.get("f1"),
+                "period": "validation", "note": "No baseline test metrics are saved; this is validation only."},
             "attempts": final.get("attempts_by_start_period") if final else None,
             "test_transactions": final.get("test_transactions") if final else None,
             "positive_test_transactions": final.get("positive_test_transactions") if final else None,

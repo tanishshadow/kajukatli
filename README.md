@@ -1,158 +1,96 @@
 # AML Graph
 
-AML Graph is a prototype for spotting suspicious patterns across connected bank
-transfers. A transfer that looks ordinary by itself may look different when
-viewed with the accounts and transfers around it.
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-pytest-informational)](#run-tests)
+[![Dataset](https://img.shields.io/badge/dataset-HI--Small%20synthetic-orange)](#dataset)
+[![Status](https://img.shields.io/badge/status-research%20prototype-yellow)](#current-limitations)
 
-The project checks for four patterns: many accounts sending to one account,
-one account sending to many accounts, money moving around a loop of accounts,
-and money being passed quickly from one account to another. The website lets
-you select a detector result, inspect its accounts and transfers, and replay
-the sequence over time.
+AML Graph is a prototype for spotting suspicious patterns across connected bank transfers. It groups transfers into temporal graph patterns, shows the accounts and evidence behind each candidate, and lets you replay the transfer sequence. A flagged result is a **candidate to review**; it does not prove that money laundering happened.
 
-A flagged result is a **candidate to review**. It does not prove that money
-laundering happened.
+The four detector commands map to these patterns: `fan` detects fan-in (many accounts sending to one account) and fan-out (one account sending to many); `scatter_gather` detects scatter-gather and gather-scatter layering; `cycle` detects time-ordered loops; and `pass_through` detects rapid transfer chains.
 
-## Run the website on Windows
+## Clone and install
 
-The existing `aml web` command starts the backend and serves the frontend pages
-together. There is no separate frontend server or Node.js install.
-
-### 1. Set up Python packages
-
-Python 3.12 or 3.13 is suitable; this project does not need a new Python
-installation. If `.venv` does not exist yet, create it using the Python already
-installed on your computer. Use the version you have:
+```bash
+git clone <repository-url> kajukatli
+cd kajukatli
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
 
 ```powershell
-cd C:\Users\tanis\Documents\pyinter
+git clone <repository-url> kajukatli
+cd kajukatli
 py -3.13 -m venv .venv
-# Or, if you have Python 3.12 instead:
-# py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .
 ```
 
-Install the project packages (run this once, or again after package changes):
+## Dataset
 
-```powershell
-.\.venv\Scripts\python -m pip install -e .
-```
+Get the HI-Small dataset from either [Kaggle](https://www.kaggle.com/datasets/berkanoztas/transactions-data) or [IBM's dataset page](https://github.com/IBM/AML-Data). Kaggle may require an account. The current preparation step requires these files in the project root:
 
-If `.venv` already exists, skip the environment creation command.
-
-### 2. Prepare the dataset (first setup only)
-
-Place the HI-Small files `HI-Small_Trans.csv` and `HI-Small_Patterns.txt` in
-the project folder. Then run:
-
-```powershell
-.\.venv\Scripts\aml prepare --config backend/configs/default.yaml
-```
-
-This creates the smaller files the app uses under `data/processed/`. The raw
-dataset files are left as they are. You can skip this step if `data/processed/`
-already contains the prepared files.
-Official dataset sources
-
-Download the dataset from either of these sources:
-
-Option 1 — Kaggle (recommended)
-
-IBM Transactions for Anti-Money Laundering (AML) — Kaggle
-
-Option 2 — IBM original dataset
-
-IBM AML Dataset — Box
-
-Kaggle may require an account to download the files.
-
-Required files
-
-The current preprocessing instructions require:
-
+```text
 HI-Small_Trans.csv
 HI-Small_Patterns.txt
-
-The HI-Small distribution also includes:
-
-HI-Small_accounts.csv
-
-### 3. Create detector results (first setup, or after preparing new data)
-
-Run each detector once to create the cases shown in the investigation page:
-
-```powershell
-.\.venv\Scripts\aml detect --detector fan --config backend/configs/default.yaml
-.\.venv\Scripts\aml detect --detector scatter_gather --config backend/configs/default.yaml
-.\.venv\Scripts\aml detect --detector cycle --config backend/configs/default.yaml
-.\.venv\Scripts\aml detect --detector pass_through --config backend/configs/default.yaml
 ```
 
-### 4. Start the website and backend
+`HI-Small_accounts.csv` is optional. Raw files remain unchanged. Prepare the processed files with:
 
-In PowerShell, go to the project folder and start the combined server:
-
-```powershell
-cd C:\Users\tanis\Documents\pyinter
-.\.venv\Scripts\aml web --config backend/configs/default.yaml
+```bash
+aml prepare --config backend/configs/default.yaml
 ```
 
-Open **http://127.0.0.1:8765/** for the website, or go directly to
-**http://127.0.0.1:8765/investigation.html** to explore detector cases. Keep
-the PowerShell window open while using the site. Press `Ctrl+C` to stop the
-server. If port 8765 is already in use, add `--port 8766` and use that port in
-the browser address.
+## Run the local demo
 
-The investigation page loads a list of real cases from the detector results.
-When you choose one, the backend fetches only that case's transactions for the
-graph; it does not send the full dataset to your browser. It shows the matched
-accounts, transfers, timing, detector evidence, and dataset labels. You can
-click accounts and transfers, move around the graph, and play or pause the
-transfer sequence.
+Create detector results for the investigation page:
 
-To run the project's checks after making code changes:
-
-```powershell
-.\.venv\Scripts\python -m pytest -q
+```bash
+aml detect --detector fan --config backend/configs/default.yaml
+aml detect --detector scatter_gather --config backend/configs/default.yaml
+aml detect --detector cycle --config backend/configs/default.yaml
+aml detect --detector pass_through --config backend/configs/default.yaml
 ```
 
-## What the results mean
+Start the combined backend and website:
 
-The project uses the **HI-Small synthetic dataset**: computer-generated bank
-transactions with example suspicious patterns. This is useful for building
-and demonstrating the prototype, but it is not real customer activity. Good
-results on this dataset would not by themselves show that the system works
-well at a bank.
+```bash
+aml web --config backend/configs/default.yaml
+```
 
-The system uses earlier data to set its rules, a separate validation period to
-choose its alert cutoff, and a final test period to measure the frozen setup.
-The final test is protected against being run a second time under a changed
-configuration. **Do not run `aml report` casually:** it performs that final
-evaluation, and it is intended to run once.
+Open **http://127.0.0.1:8765/** or go directly to **http://127.0.0.1:8765/investigation.html**. The backend is not hosted because the IBM dataset is large and subject to its license. The live site uses precomputed sample cases; the full pipeline runs locally. On Windows, press `Ctrl+C` in PowerShell to stop the server. To use another port, add `--port 8766`.
+
+The investigation page fetches only the selected case's transactions for the graph, not the full dataset. It shows the accounts, transfers, timing, detector evidence, and dataset labels.
+
+## Run tests
+
+After activating the virtual environment, run:
+
+```bash
+pytest -q
+```
+
+```powershell
+python -m pytest -q
+```
+
+## Evaluation integrity
+
+The system uses a temporal split: train data sets detector/model parameters, validation data selects the alert cutoff, and the frozen setup is measured on the final test period. `aml report` performs that final evaluation and is guarded against a second run under a changed configuration. Avoid running it casually; use the saved report and the [Evaluation page](http://127.0.0.1:8765/evaluation.html) for existing results.
 
 ### Test-period disclosure
 
-The test period was evaluated twice before the one-run safeguard was added.
-After the first run, scoring and evasion settings changed and score-report
-formatting was updated. The earlier outputs are kept under
-`outputs/m11/archived_exploratory/` and are exploratory, not the final result.
-Those earlier files did not record a configuration hash, so an exact
-before-and-after hash comparison is unavailable. The current final report was
-run with the frozen configuration recorded by the project.
+The test period was evaluated twice before the one-run safeguard was added. After the first run, scoring and evasion settings changed and score-report formatting was updated. The earlier outputs are kept under `outputs/m11/archived_exploratory/` and are exploratory, not the final result. Those earlier files did not record a configuration hash, so an exact before-and-after hash comparison is unavailable. The current final report was run with the frozen configuration recorded by the project.
 
 ## Current limitations
 
-- The data is synthetic; real-world effectiveness has not been established.
-- Some additional evaluation comparisons are unfinished. The existing final
-  report is a reduced report; do not interpret missing comparisons as passing.
-- The text summary uses a built-in offline template. No outside AI service or
-  API key is connected.
-- Very large detected cases may be shortened in the graph view; the page tells
-  you when transactions were omitted.
+- HI-Small is synthetic; real-world effectiveness has not been established.
+- Some evaluation comparisons are unfinished. The saved final report is reduced; missing comparisons should not be interpreted as passing.
+- Some benchmark typologies are not covered, and recall varies by pattern.
+- Summaries use an offline deterministic template; no outside AI service or API key is connected.
+- Very large detected cases may be shortened in the graph view; the page reports when transfers are omitted.
 
 ## Data credit
 
-The HI-Small benchmark comes from IBM's synthetic financial-transactions work.
-See the [research paper](https://proceedings.neurips.cc/paper_files/paper/2023/hash/5f38404edff6f3f642d6fa5892479c42-Abstract-Datasets_and_Benchmarks.html)
-and IBM's [dataset information and license](https://github.com/IBM/AML-Data/blob/main/README.md)
-before sharing the dataset or a hosted copy. Raw data and generated results are
-excluded from Git.
+The HI-Small benchmark comes from IBM's synthetic financial-transactions work. See the [research paper](https://proceedings.neurips.cc/paper_files/paper/2023/hash/5f38404edff6f3f642d6fa5892479c42-Abstract-Datasets_and_Benchmarks.html) and IBM's [dataset information and license](https://github.com/IBM/AML-Data/blob/main/README.md) before sharing the dataset or a hosted copy. Raw data and generated results are excluded from Git.

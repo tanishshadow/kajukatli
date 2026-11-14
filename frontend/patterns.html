@@ -28,6 +28,25 @@
 .detector-choice::after { content:'↗'; position:absolute; right:-1.2em; top:.15em; font-size:.65em; opacity:0; transition:opacity .2s ease; }
 .detector-choice:hover::after,.detector-choice[aria-pressed="true"]::after { opacity:1; }
 .detector-choice:focus-visible { outline:2px solid var(--ink); outline-offset:5px; }
+.detector-composition.ribbon-composition { display:block; position:relative; isolation:isolate; overflow:clip; margin-inline:calc(-1 * var(--pad)); padding-inline:var(--pad); }
+.takeover-panel > .section-title,.takeover-panel > .section-kicker { position:relative; z-index:2; }
+.ribbon-art { position:absolute; inset:0; width:100%; height:100%; z-index:-1; pointer-events:none; overflow:visible; }
+.ribbon-art path { fill:none; stroke:#62dce8; stroke-width:300; stroke-linecap:round; stroke-linejoin:round; }
+.ribbon-art #shadow-path { stroke:url(#ribbon-crossing); stroke-linecap:butt; }
+.ribbon-composition .pattern-list { position:relative; display:grid; grid-template-rows:repeat(4,minmax(560px,auto)); border:0; }
+.ribbon-composition .pattern { position:relative; align-self:center; width:47%; border:0; border-radius:1rem; padding:1.5rem; background:var(--paper); grid-template-columns:1fr auto; gap:1rem; opacity:1; transform:none; }
+.ribbon-composition .pattern:nth-child(even) { justify-self:end; }
+.ribbon-composition .pattern-index { grid-column:1/-1; }
+.ribbon-composition .pattern h2 { font-size:clamp(1.6rem,2.7vw,2.7rem); }
+.ribbon-composition .pattern.is-active { background:var(--paper); box-shadow:inset 4px 0 var(--sage); }
+.ribbon-composition .detector-visual { position:absolute; top:80px; right:var(--pad); width:35%; max-width:440px; z-index:1; transition:background .3s ease; }
+.ribbon-composition .pattern:nth-child(even).is-active ~ * { pointer-events:auto; }
+@media(max-width:760px) {
+ .ribbon-composition .pattern-list { grid-template-rows:repeat(4,minmax(680px,auto)); }
+ .ribbon-composition .pattern { width:100%; align-self:start; margin-top:4rem; padding:1.2rem; }
+ .ribbon-composition .detector-visual { width:60%; max-width:260px; right:var(--pad); }
+ .ribbon-art path { stroke-width:190; }
+}
 @media(max-width:760px) { .detector-composition { grid-template-columns:1fr; } .detector-visual { position:relative; top:auto; grid-row:1; max-width:32rem; width:100%; justify-self:center; } }
 .pattern-takeover.is-ready .page-hero { position:sticky; top:var(--hero-pin,0px); transform-origin:center bottom; transform:perspective(1600px) scale(var(--hero-scale,1)); }
 .pattern-takeover.is-ready .takeover-panel { position:relative; z-index:1; background:var(--paper); border-radius:var(--panel-radius,56px) var(--panel-radius,56px) 0 0; transform-origin:center top; transform:perspective(1600px) translateY(var(--panel-offset,0px)) rotateX(var(--panel-tilt,0deg)) scale(var(--panel-scale,1)); }
@@ -52,13 +71,64 @@
   panel.classList.add('takeover-panel');
   const list = panel.querySelector('.pattern-list');
   const composition = document.createElement('div');
-  composition.className = 'detector-composition';
+  composition.className = 'detector-composition ribbon-composition';
   list.before(composition);
   composition.append(list);
   const visual = document.createElement('figure');
   visual.className = 'detector-visual';
   visual.setAttribute('aria-label', 'Illustrative detector structure');
   composition.append(visual);
+  const ns = 'http://www.w3.org/2000/svg';
+  const ribbon = document.createElementNS(ns,'svg');
+  ribbon.classList.add('ribbon-art'); ribbon.setAttribute('aria-hidden','true');
+  ribbon.setAttribute('preserveAspectRatio','none');
+  ribbon.innerHTML = '<defs><linearGradient id="ribbon-crossing" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#080908" stop-opacity="0"/><stop offset=".5" stop-color="#080908" stop-opacity=".24"/><stop offset="1" stop-color="#080908" stop-opacity="0"/></linearGradient></defs><path id="main-path"/><path id="shadow-path"/><path id="secondary-path"/>';
+  composition.prepend(ribbon);
+  const mainPath = ribbon.querySelector('#main-path'), secondPath = ribbon.querySelector('#secondary-path'), shadowPath = ribbon.querySelector('#shadow-path');
+  let ribbonTop=0,ribbonHeight=1,mainLength=1,secondLength=1;
+  function ribbonGeometry() {
+    const phone=matchMedia('(max-width:760px)').matches;
+    ribbon.setAttribute('viewBox',phone?'0 0 600 3200':'0 0 1600 3200');
+    mainPath.setAttribute('d',phone?'M120 -100 C-80 300 550 450 450 850 C350 1200 50 1150 130 1550 C200 1920 560 1940 470 1500 C390 1150 100 1400 270 1780':'M200 -100 C200 400 1400 400 1200 900 C1000 1200 200 1100 350 1600 C500 2100 1450 1900 1250 1400 C1100 1000 500 1200 700 1700');
+    secondPath.setAttribute('d',phone?'M270 1780 C460 2200 30 2260 150 2660 C240 2950 530 2830 420 3300':'M700 1700 C900 2200 200 2300 350 2700 C500 3000 1300 2800 1300 3300');
+    shadowPath.setAttribute('d',phone?'M180 1770 Q280 1920 370 1865':'M540 1835 Q710 1980 920 1900');
+    mainLength=mainPath.getTotalLength();secondLength=secondPath.getTotalLength();
+    // Place the short shadow on the lower strand at the actual crossing,
+    // independently for the desktop and mobile Bezier compositions.
+    let closest=Infinity,crossing=mainLength*.7;
+    for(let i=8;i<85;i++) {
+      const a=mainPath.getPointAtLength(mainLength*i/100);
+      for(let j=2;j<45;j++) {
+        const b=secondPath.getPointAtLength(secondLength*j/100);
+        const distance=Math.hypot(a.x-b.x,a.y-b.y);
+        if(distance<closest){closest=distance;crossing=mainLength*i/100;}
+      }
+    }
+    const span=phone?130:190;
+    const a=mainPath.getPointAtLength(Math.max(0,crossing-span));
+    const b=mainPath.getPointAtLength(crossing);
+    const c=mainPath.getPointAtLength(Math.min(mainLength,crossing+span));
+    shadowPath.setAttribute('d',`M${a.x} ${a.y} Q${2*b.x-(a.x+c.x)/2} ${2*b.y-(a.y+c.y)/2} ${c.x} ${c.y}`);
+    mainPath.style.strokeDasharray=`${mainLength} ${mainLength}`;secondPath.style.strokeDasharray=`${secondLength} ${secondLength}`;
+    ribbonTop=composition.getBoundingClientRect().top+scrollY;
+    ribbonHeight=composition.offsetHeight;
+  }
+  // Invert cubic-bezier x to evaluate the documented first-path timing curve.
+  function ribbonEase(x) {
+    let lo=0,hi=1,t=.5;
+    const cubic=(a,b,t)=>3*(1-t)*(1-t)*t*a+3*(1-t)*t*t*b+t*t*t;
+    for(let i=0;i<18;i++){t=(lo+hi)/2;if(cubic(.952,.744,t)<x)lo=t;else hi=t;}
+    return cubic(.017,.69,t);
+  }
+  function drawRibbon() {
+    const motionOff=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    const progress=motionOff?1:Math.max(0,Math.min(1,(scrollY+document.documentElement.clientHeight*.72-ribbonTop)/(ribbonHeight-document.documentElement.clientHeight*.28)));
+    const time=progress*1.9;
+    mainPath.style.strokeDashoffset=String(progress===1?0:mainLength*(1-ribbonEase(Math.min(1,time/.9))));
+    secondPath.style.strokeDashoffset=String(progress===1?0:secondLength*(1-Math.max(0,Math.min(1,(time-.9)))));
+    shadowPath.style.opacity=String(motionOff?1:Math.max(0,Math.min(1,(time-.95)/.15)));
+    ribbon.dataset.progress=String(progress);
+  }
   const diagrams = {
     fan: {points:[[80,90],[80,200],[80,310],[260,200],[430,90],[430,310]], links:[[0,3],[1,3],[2,3],[3,4],[3,5]],color:'var(--sky)'},
     scatter: {points:[[70,200],[250,90],[250,200],[250,310],[430,200]],links:[[0,1],[0,2],[0,3],[1,4],[2,4],[3,4]],color:'var(--sage)'},
@@ -71,6 +141,10 @@
     const diagram = diagrams[key];
     choices.forEach(button => { const active = button.closest('.pattern') === article; button.setAttribute('aria-pressed', String(active)); button.closest('.pattern').classList.toggle('is-active', active); });
     visual.style.background = diagram.color;
+    const phone=matchMedia('(max-width:760px)').matches;
+    visual.style.top=`${article.offsetTop+(phone?article.offsetHeight+35:35)}px`;
+    visual.style.right=phone||article.matches(':nth-child(odd)')?'var(--pad)':'auto';
+    visual.style.left=!phone&&article.matches(':nth-child(even)')?'var(--pad)':'auto';
     // These diagrams describe motif topology only; no dataset evidence is generated.
     visual.innerHTML = `<svg viewBox="0 0 500 400" role="img" aria-label="${article.querySelector('h2').textContent} illustrative structure"><defs><marker id="motif-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="currentColor"/></marker></defs>${diagram.links.map(([a,b]) => {const [x1,y1]=diagram.points[a], [x2,y2]=diagram.points[b];const dx=x2-x1,dy=y2-y1,length=Math.hypot(dx,dy);return `<line x1="${x1+dx/length*20}" y1="${y1+dy/length*20}" x2="${x2-dx/length*25}" y2="${y2-dy/length*25}" stroke="currentColor" stroke-width="2" marker-end="url(#motif-arrow)"/>`;}).join('')}${diagram.points.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${key==='fan'&&i===3?25:17}" fill="${i===0?'var(--paper)':'var(--ink)'}" stroke="var(--ink)" stroke-width="2"/>`).join('')}</svg><figcaption>Illustrative structure · ${article.querySelector('h2').textContent}</figcaption>`;
     if (!matchMedia('(prefers-reduced-motion:reduce)').matches) visual.querySelector('svg').animate([{opacity:.3,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,.7,.2,1)'});
@@ -97,6 +171,7 @@
   const clamp = value => Math.min(1, Math.max(0, value));
   function render() {
     queued = false;
+    drawRibbon();
     if (reduced.matches) return;
     const progress = clamp((scrollY + height - start) / (height * .9));
     // A bounded 2px settling lobe is tied to scroll too: reversing the scroll
@@ -115,6 +190,7 @@
     start = wrapper.getBoundingClientRect().top + scrollY + hero.offsetHeight;
     wrapper.style.setProperty('--hero-pin', `${Math.min(0, height - hero.offsetHeight)}px`);
     wrapper.classList.add('is-ready');
+    ribbonGeometry();
     schedule();
   }
   window.addEventListener('scroll', schedule, {passive:true});
@@ -122,6 +198,13 @@
   reduced.addEventListener('change', measure);
   if ('ResizeObserver' in window) new ResizeObserver(measure).observe(hero);
   measure();
+  const entranceObserver = new IntersectionObserver(entries=>entries.forEach(entry=>{
+    if(!entry.isIntersecting)return;
+    if(!reduced.matches) entry.target.animate([{opacity:.3,transform:'translateY(28px) scale(.98)'},{opacity:1,transform:'translateY(-2px) scale(1.003)',offset:.8},{opacity:1,transform:'none'}],{duration:620,easing:'cubic-bezier(.2,.7,.2,1)'});
+    entranceObserver.unobserve(entry.target);
+  }),{threshold:.15});
+  list.querySelectorAll('.pattern').forEach(article=>entranceObserver.observe(article));
+  new ResizeObserver(()=>{ ribbonGeometry(); schedule(); }).observe(composition);
 })();
 </script>
 </body></html>

@@ -3,8 +3,8 @@
 **Test-period disclosure:** `aml report` was invoked twice before the one-shot
 guard was added; those reports are archived as exploratory outputs. After the
 first report, the working tree diff from commit `08d956c` added
-`scoring.tuning_grid` and `evasion.strengths` in `configs/default.yaml`, and
-changed score report serialization in `src/aml/score/run.py`. No later detector
+`scoring.tuning_grid` and `evasion.strengths` in `backend/configs/default.yaml`, and
+changed score report serialization in `backend/src/aml/score/run.py`. No later detector
 source commit appears in `git log` after `08d956c`. The exploratory JSON files
 contain no frozen hash, so a before/after hash comparison is unavailable. The
 final one-shot report used frozen hash
@@ -20,7 +20,7 @@ temporal splits, and the data checklist. M2 adds the validated temporal graph
 and CSR indexes. M3–M7 add the baseline, evaluation harness, six temporal
 typologies, FX, and evidence-backed alerts. M8 adds guarded clustering and
 train-only account/cluster scoring. Final tuning and test evaluation remain
-M9–M11 work. Frontend work and M13 are excluded.
+M9–M11 work. Frontend pages are in `frontend/`; backend source, tests, and configuration are in `backend/`. Raw datasets and generated `data/` and `outputs/` stay at the repository root.
 
 ## Environment
 
@@ -37,12 +37,12 @@ dependencies:
 python -m venv --system-site-packages .venv
 .\.venv\Scripts\python -m pip install --no-deps --no-build-isolation -e .
 .\.venv\Scripts\python -m pytest -q
-.\.venv\Scripts\aml prepare --config configs/default.yaml
+.\.venv\Scripts\aml prepare --config backend/configs/default.yaml
 # Subsequent checklist runs use the existing Parquet:
-.\.venv\Scripts\aml prepare --config configs/default.yaml --reuse
+.\.venv\Scripts\aml prepare --config backend/configs/default.yaml --reuse
 ```
 
-`python -m aml prepare --config configs/default.yaml` is equivalent after
+`python -m aml prepare --config backend/configs/default.yaml` is equivalent after
 activation. Dependency declarations are in `pyproject.toml`; no full dependency
 lock is claimed for unimplemented milestones.
 
@@ -71,14 +71,14 @@ source timezone is unspecified. Ties remain distinct through transaction IDs.
 
 M1 performs descriptive full-timeline counts only. Parameter derivation uses
 train rows and fully contained train attempts, excluding train-start straddlers
-from fitting. Quantile policies are in `configs/default.yaml`; measured settings
+from fitting. Quantile policies are in `backend/configs/default.yaml`; measured settings
 are emitted under `outputs/`. Dampening will use activity-bin occupancy and
 count regularity within the measured train span, replacing a 30-day rule.
 
 ## M1 measurements
 
-Produced by `.\.venv\Scripts\python -m aml prepare --config configs/default.yaml`
-and then `.\.venv\Scripts\aml prepare --config configs/default.yaml --reuse` after
+Produced by `.\.venv\Scripts\python -m aml prepare --config backend/configs/default.yaml`
+and then `.\.venv\Scripts\aml prepare --config backend/configs/default.yaml --reuse` after
 selecting timestamp-quantile boundaries:
 
 - 5,078,345 transactions; 515,088 bank-qualified accounts; 5,177 labeled

@@ -16,7 +16,7 @@ def main() -> None:
 
 
 @app.command()
-def prepare(config: Path = typer.Option(Path("configs/default.yaml"), exists=True),
+def prepare(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True),
             reuse: bool = typer.Option(False, help="Rebuild the checklist from existing Parquet, without opening raw files.")) -> None:
     """Convert HI-Small to compact Parquet and produce the M1 data checklist."""
     report = prepare_data(Settings.from_yaml(config), reuse=reuse)
@@ -25,7 +25,7 @@ def prepare(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tru
 
 
 @app.command()
-def baseline(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+def baseline(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True)) -> None:
     """Tune baseline on train and report train/validation metrics."""
     import json
     from aml.eval.run_baseline import run
@@ -33,7 +33,7 @@ def baseline(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tr
 
 
 @app.command()
-def detect(detector: str = typer.Option("fan"), config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+def detect(detector: str = typer.Option("fan"), config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True)) -> None:
     """Run an implemented detector over the full prepared timeline."""
     import json
     from aml.detect.run import run
@@ -41,7 +41,7 @@ def detect(detector: str = typer.Option("fan"), config: Path = typer.Option(Path
 
 
 @app.command()
-def narrate(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+def narrate(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True)) -> None:
     """Produce the M4 evidence-backed backend slice from fan hits."""
     import json
     from aml.narrative.run import run
@@ -49,7 +49,7 @@ def narrate(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tru
 
 
 @app.command()
-def cluster(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+def cluster(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True)) -> None:
     """Merge evidence, fit train-only models, and export ranked alerts."""
     import json
     from aml.score.run import run
@@ -57,21 +57,21 @@ def cluster(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tru
 
 
 @app.command()
-def tune(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+def tune(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True)) -> None:
     import json
     from aml.eval.tune import tune as run_tuning
     typer.echo(json.dumps(run_tuning(Settings.from_yaml(config)), indent=2))
 
 
 @app.command()
-def evasion(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+def evasion(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True)) -> None:
     import json
     from aml.eval.evasion import run
     typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
 
 
 @app.command()
-def report(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+def report(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True)) -> None:
     import json
     from aml.eval.report import run
     typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))

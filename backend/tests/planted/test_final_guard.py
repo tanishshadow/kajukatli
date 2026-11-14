@@ -14,7 +14,7 @@ def test_final_guard_blocks_second_run_and_changed_hash(tmp_path):
     config = tmp_path / "configs"
     config.mkdir()
     from pathlib import Path
-    old = Path("configs/default.yaml")
+    old = Path("backend/configs/default.yaml")
     # Hash helper resolves repository config, so exercise guard hash seam directly.
     import aml.eval.frozen as frozen
     monkey = frozen.frozen_hash

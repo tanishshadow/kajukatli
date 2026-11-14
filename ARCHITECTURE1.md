@@ -59,23 +59,25 @@ Write our own implementation. Credit all sources in the README and check their l
 
 ```
 aml-graph/
-  ARCHITECTURE.md  AGENTS.md  README.md  pyproject.toml
-  configs/default.yaml          # all thresholds and weights
-  data/                         # gitignored
-  src/aml/
-    data/      loader.py split.py labels.py patterns_parser.py
-    graph/     build.py                      # TemporalGraph + CSR indexes
-    detect/    fan.py scatter_gather.py cycles.py passthrough.py common.py
-    cluster/   merge.py
-    score/     features.py model.py risk.py  # features, XGBoost, transparent score
-    typology/  label.py
-    baseline/  threshold.py
-    eval/      metrics.py tune.py bootstrap.py report.py evasion.py
-    narrative/ evidence.py template.py llm.py render.py
-    api/       schemas.py
-    cli.py
-  app/streamlit_app.py
-  tests/planted/  test_*.py
+  ARCHITECTURE1.md  AGENTS.md  README.md  pyproject.toml
+  frontend/                     # static informational pages
+  backend/
+    configs/default.yaml        # all thresholds and weights
+    src/aml/
+      data/      loader.py split.py labels.py patterns_parser.py
+      graph/     build.py                      # TemporalGraph + CSR indexes
+      detect/    fan.py scatter_gather.py cycles.py passthrough.py common.py
+      cluster/   merge.py
+      score/     features.py model.py risk.py  # features, XGBoost, transparent score
+      typology/  label.py
+      baseline/  threshold.py
+      eval/      metrics.py tune.py bootstrap.py report.py evasion.py
+      narrative/ evidence.py template.py llm.py render.py
+      api/       schemas.py
+      cli.py
+    tests/planted/              # test_*.py
+  data/                         # gitignored; raw files stay at repository root
+  outputs/                      # gitignored
 ```
 
 ---
@@ -135,7 +137,7 @@ class Hit(BaseModel):
 
 ## 7. Detectors
 
-All parameters come from `configs/default.yaml` and are set from the data checklist, then tuned on train.
+All parameters come from `backend/configs/default.yaml` and are set from the data checklist, then tuned on train.
 
 ### 7.1 Fan-out / fan-in
 Two-pointer sliding window of width `W` over each node's time-sorted out-edges (in-edges for fan-in). Hit when distinct counterparties in the window `>= k`. Merge overlapping windows per hub. O(E log E).
@@ -358,7 +360,7 @@ Also: metrics vs hand-computed confusion matrices; split has no leakage; baselin
 
 - One milestone at a time; write the planted-pattern tests before the detector.
 - Type hints everywhere; pydantic at module boundaries.
-- No threshold or weight hard-coded; everything in `configs/default.yaml`.
+- No threshold or weight hard-coded; everything in `backend/configs/default.yaml`.
 - Fixed seeds; deterministic detectors and metrics.
 - Never touch the test period inside tuning code; assertion enforces it.
 - Do not change `eval/metrics.py` without updating its tests.

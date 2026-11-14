@@ -191,7 +191,7 @@ def prepare(settings: Settings, *, reuse: bool = False) -> dict[str, Any]:
     file_paths = [settings.data.transactions, settings.data.patterns, loaded.transactions_path,
                   loaded.accounts_path, attempts_path]
     report: dict[str, Any] = {
-        "command": "python -m aml prepare --config configs/default.yaml" + (" --reuse" if reuse else ""),
+        "command": "python -m aml prepare --config backend/configs/default.yaml" + (" --reuse" if reuse else ""),
         "reused_parquet": reuse,
         "source_columns": RAW_COLUMNS,
         "account_identity": "(bank string, account string); leading zeros preserved; src/dst factorized int32",

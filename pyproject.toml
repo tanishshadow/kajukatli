@@ -20,8 +20,8 @@ dev = ["pytest"]
 aml = "aml.cli:app"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["backend/src"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src", "tests"]
+testpaths = ["backend/tests"]
+pythonpath = ["backend/src", "backend/tests"]

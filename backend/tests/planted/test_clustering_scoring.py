@@ -15,7 +15,7 @@ def test_tiny_end_to_end_ranked_alerts_have_real_probabilities(tmp_path) -> None
     from aml.data.split import TemporalSplit
     from aml.score.run import run
     from aml.api.schemas import Alert
-    settings = Settings.from_yaml(__import__("pathlib").Path("configs/default.yaml"))
+    settings = Settings.from_yaml(__import__("pathlib").Path("backend/configs/default.yaml"))
     settings.data.processed_dir = tmp_path / "data" / "processed"
     settings.output_dir = tmp_path / "outputs"
     settings.scoring["model"]["n_estimators"] = 5

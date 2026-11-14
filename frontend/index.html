@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2f2f0">
+  <meta name="description" content="AML Graph — temporal graph detection for layered transaction patterns.">
+  <title>AML Graph — Follow the flow</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f2f2f0;
+      --ink: #080908;
+      --line: #c9c9c5;
+      --lime: #c4f23d;
+      --sage: #a9c0aa;
+      --sky: #bde6f8;
+      --blue: #9fc4d5;
+      --coral: #ff8d69;
+      --apricot: #f3be78;
+      --grid: rgba(207, 120, 101, .11);
+      --page-pad: clamp(1.15rem, 4.1vw, 4.5rem);
+      --sans: "Manrope", "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      --hand: "Segoe Print", "Bradley Hand", cursive;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
+    body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--sans); }
+    a { color: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
+    .site-nav {
+      z-index: 10; position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+      width: min(calc(100% - 2rem), 66rem); min-height: 3.6rem; padding: .35rem .45rem .35rem 1.15rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      border: 1px solid #999a96; border-radius: 999px; background: rgba(242,242,240,.9);
+      transition: width .35s ease, background .35s ease, box-shadow .35s ease;
+      animation: nav-in .7s cubic-bezier(.2,.75,.25,1) both;
+    }
+    .site-nav.is-scrolled { width: min(calc(100% - 2rem), 61rem); background: rgba(242,242,240,.96); box-shadow: 0 8px 30px rgba(0,0,0,.06); }
+    .wordmark { font-size: 1.12rem; font-weight: 850; letter-spacing: -.09em; text-decoration: none; white-space: nowrap; }
+    .wordmark span { display: inline-block; margin-right: .25em; width: .55em; height: .55em; border: 2px solid currentColor; border-radius: 50%; position: relative; }
+    .wordmark span::after { content: ""; position: absolute; inset: 2px -4px -2px 3px; border: 1.5px solid currentColor; border-radius: 50%; }
+    .nav-links { display: flex; align-items: center; gap: clamp(1rem, 3vw, 2.8rem); }
+    .nav-links a { text-decoration: none; font-size: .78rem; font-weight: 650; transition: opacity .2s ease; }
+    .nav-links a:hover { opacity: .55; }
+    .nav-actions { display: flex; gap: .25rem; align-items: center; }
+    .nav-cta, .arrow-link { min-height: 2.65rem; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+    .nav-cta { padding: 0 1.15rem; border-radius: 999px; background: var(--ink); color: white; font-size: .75rem; font-weight: 700; transition: transform .2s ease, background .2s ease; }
+    .nav-cta:hover { transform: translateY(-2px); background: #30312e; }
+    .arrow-link { width: 2.65rem; border-radius: 50%; background: var(--ink); color: white; font-size: 1.2rem; transition: transform .2s ease; }
+    .arrow-link:hover { transform: rotate(45deg); }
+    .menu-toggle { display: none; border: 1px solid var(--line); background: transparent; border-radius: 50%; width: 2.7rem; height: 2.7rem; font: inherit; }
+
+    .hero { min-height: 100svh; padding: 9.5rem var(--page-pad) 0; position: relative; overflow: hidden; }
+    .hero-top { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(18rem,.65fr); gap: 7vw; align-items: end; }
+    .eyebrow { display: flex; gap: .65rem; align-items: center; margin: 0 0 1rem; font-size: .67rem; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 1.7rem; height: 1px; background: currentColor; }
+    h1 { max-width: 12ch; margin: 0; font-size: clamp(3.4rem, 8.2vw, 8.6rem); line-height: .88; letter-spacing: -.085em; font-weight: 760; }
+    .hero-copy { max-width: 27rem; padding: 0 0 .65rem; }
+    .hero-copy p { font-size: clamp(1.12rem, 1.7vw, 1.55rem); line-height: 1.32; letter-spacing: -.045em; margin: 0 0 1.5rem; }
+    .text-link { display: inline-flex; gap: .8rem; align-items: center; border-bottom: 1px solid var(--ink); padding-bottom: .35rem; font-size: .82rem; font-weight: 750; text-decoration: none; }
+    .text-link span { transition: transform .2s ease; }
+    .text-link:hover span { transform: translate(3px,-3px); }
+
+    .art-stage { position: relative; margin: clamp(3rem, 7vw, 6.4rem) calc(var(--page-pad) * -1) 0; min-height: 17.5rem; height: min(39vh, 24rem); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; }
+    .art-grid { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(14, 1fr); grid-template-rows: repeat(4, 1fr); }
+    .tile { position: relative; min-width: 0; overflow: hidden; opacity: 0; animation: tile-in .65s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: calc(var(--i) * 35ms + 250ms); }
+    .tile::before, .tile::after { content: ""; position: absolute; }
+    .sage { background: var(--sage); } .lime { background: var(--lime); } .sky { background: var(--sky); } .coral { background: var(--coral); } .apricot { background: var(--apricot); } .blank { background: var(--paper); }
+    .circle::before { inset: 7%; border-radius: 50%; background: inherit; }
+    .half-round::before { width: 100%; aspect-ratio: 1; border-radius: 100% 100% 0 0; background: var(--paper); bottom: 0; left: 0; }
+    .quarter::before { width: 100%; aspect-ratio: 1; border-radius: 100% 0 0 0; background: var(--paper); right: 0; bottom: 0; }
+    .triangle::before { inset: 0; background: var(--paper); clip-path: polygon(100% 0,100% 100%,0 100%); }
+    .diamond::before { width: 62%; aspect-ratio: 1; background: inherit; border: 1px solid currentColor; left: 19%; top: 19%; transform: rotate(45deg); }
+    .mark-cell { grid-column: span 2; display: grid; place-items: center; background: var(--coral); }
+    .mark { display: grid; place-items: center; width: min(42%, 7rem); aspect-ratio: 1; border: 1px solid rgba(8,9,8,.2); border-radius: 50%; font-size: clamp(1.8rem, 4vw, 3.6rem); font-weight: 800; letter-spacing: -.1em; transition: transform .7s cubic-bezier(.2,.8,.2,1); }
+    .art-stage:hover .mark { transform: rotate(-14deg) scale(1.06); }
+    .art-caption { position: absolute; bottom: .55rem; left: var(--page-pad); z-index: 1; font-size: .62rem; text-transform: uppercase; letter-spacing: .12em; }
+    .art-caption.right { left: auto; right: var(--page-pad); }
+    .hero-meta { position: absolute; bottom: 1.35rem; right: var(--page-pad); color: #5d5e59; font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; }
+
+    .grid-paper { background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px), linear-gradient(to bottom, var(--grid) 1px, transparent 1px); background-size: 2.75rem 2.75rem; }
+    .section { padding: clamp(5rem, 10vw, 9rem) var(--page-pad); }
+    .intro { min-height: 77vh; display: grid; grid-template-columns: .55fr 1.45fr; align-content: center; column-gap: 6vw; position: relative; }
+    .hand { margin: .5rem 0; font-family: var(--hand); font-size: 1.15rem; font-style: italic; transform: rotate(-4deg); }
+    .intro h2 { max-width: 18ch; margin: 0; font-size: clamp(2.1rem, 4.7vw, 4.8rem); line-height: 1.06; letter-spacing: -.07em; font-weight: 650; }
+    .orbit { grid-column: 2; width: clamp(7rem, 12vw, 11rem); aspect-ratio: 1; margin: 2rem auto 0; border-radius: 50%; display: grid; place-items: center; background: var(--coral); font-size: 3.6rem; font-weight: 800; letter-spacing: -.1em; animation: float 5s ease-in-out infinite; }
+
+    .workflow { border-top: 1px solid var(--line); display: grid; grid-template-columns: .8fr 1.2fr; gap: 7vw; align-items: start; }
+    .workflow h2, .features h2 { font-size: clamp(2.6rem, 6vw, 6rem); line-height: .94; letter-spacing: -.08em; font-weight: 700; margin: .25rem 0 1.5rem; }
+    .workflow-intro { max-width: 26rem; color: #545650; line-height: 1.6; }
+    .flow-map { position: relative; min-height: 23rem; border-block: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; }
+    .flow-line { position: absolute; left: 13%; right: 13%; top: 50%; height: 1px; background: var(--ink); transform: scaleX(0); transform-origin: left; transition: transform 1.25s cubic-bezier(.2,.8,.2,1); }
+    .is-visible .flow-line { transform: scaleX(1); }
+    .node { position: relative; z-index: 1; display: grid; justify-items: center; gap: .9rem; text-align: center; font-size: .72rem; font-weight: 750; text-transform: uppercase; letter-spacing: .12em; }
+    .node-shape { width: clamp(4.5rem, 8vw, 7.5rem); aspect-ratio: 1; display: grid; place-items: center; border: 1px solid var(--ink); background: var(--paper); border-radius: 50%; font-size: 1.5rem; transition: transform .35s ease; }
+    .node:nth-of-type(3) .node-shape { background: var(--lime); border-radius: 1rem; transform: rotate(45deg) scale(.82); }
+    .node:nth-of-type(3) .node-shape span { transform: rotate(-45deg); }
+    .node:hover .node-shape { transform: translateY(-8px); }
+    .node:nth-of-type(3):hover .node-shape { transform: rotate(45deg) scale(.9) translateY(-5px); }
+    .features { border-top: 1px solid var(--line); }
+    .feature-heading { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 2.5rem; }
+    .feature-heading p { max-width: 24rem; color: #545650; line-height: 1.5; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+    .feature { min-height: 20rem; padding: 1.4rem; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-radius: .75rem; transition: transform .35s ease; }
+    .feature:hover { transform: translateY(-5px); }
+    .feature:nth-child(1) { background: var(--sky); } .feature:nth-child(2) { background: var(--blue); } .feature:nth-child(3) { background: var(--coral); }
+    .feature h3 { margin: 0; font-size: clamp(1.3rem, 2.4vw, 2.2rem); letter-spacing: -.06em; }
+    .feature-art { min-height: 9rem; display: flex; align-items: end; gap: .18rem; }
+    .feature-art i { display: block; background: var(--ink); }
+    .dots i { width: clamp(2.4rem, 5vw, 4.3rem); aspect-ratio: 1; border-radius: 50%; transition: transform .4s ease; }
+    .dots i:nth-child(2) { transform: scale(.83); }.dots i:nth-child(3) { transform: scale(.62); }.dots i:nth-child(4) { transform: scale(.4); }
+    .feature:hover .dots i { transform: translateY(-.45rem); }
+    .asterisk { font-size: clamp(7rem, 13vw, 12rem); line-height: .8; font-weight: 700; transform-origin: 50% 70%; transition: transform .45s ease; }
+    .feature:hover .asterisk { transform: rotate(18deg); }
+    .arc { width: 10rem; height: 5rem; border: 1.4rem solid var(--ink); border-bottom: 0; border-radius: 10rem 10rem 0 0; transition: transform .4s ease; }
+    .feature:hover .arc { transform: scale(1.08) translateX(.4rem); }
+    .feature p { margin: .9rem 0 0; max-width: 21rem; color: rgba(8,9,8,.7); font-size: .9rem; line-height: 1.45; }
+    .final { border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: end; gap: 2rem; }
+    .final h2 { max-width: 12ch; margin: 0; font-size: clamp(3rem, 7vw, 7rem); line-height: .9; letter-spacing: -.08em; }
+    .final p { max-width: 20rem; color: #545650; line-height: 1.5; }
+    footer { padding: 1.5rem var(--page-pad) 2rem; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: .75rem; }
+    footer p { margin: 0; color: #62635d; }
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+    .reveal.is-visible { opacity: 1; transform: translateY(0); }
+    @keyframes nav-in { from { opacity: 0; transform: translate(-50%,-12px); } to { opacity: 1; transform: translate(-50%,0); } }
+    @keyframes tile-in { to { opacity: 1; } }
+    @keyframes float { 0%,100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+    @media (max-width: 760px) {
+      .site-nav { padding-left: .9rem; }
+      .menu-toggle { display: inline-grid; place-items: center; }
+      .nav-links { display: none; position: absolute; top: calc(100% + .55rem); left: 0; right: 0; padding: .65rem; border: 1px solid var(--line); border-radius: 1.2rem; background: var(--paper); box-shadow: 0 14px 35px rgba(0,0,0,.09); }
+      .nav-links.is-open { display: grid; gap: 0; }
+      .nav-links a { padding: .9rem; }
+      .nav-cta { display: none; }
+      .hero { min-height: auto; padding-top: 8.5rem; }
+      .hero-top { grid-template-columns: 1fr; gap: 1.4rem; }
+      h1 { font-size: clamp(3.6rem, 16vw, 6.2rem); max-width: 9ch; }
+      .hero-copy { max-width: 29rem; }
+      .hero-copy p { max-width: 26rem; }
+      .art-stage { height: 19rem; margin-top: 3rem; }
+      .art-grid { grid-template-columns: repeat(8,1fr); grid-template-rows: repeat(4,1fr); }
+      .tile:nth-child(n+25) { display: none; }
+      .mark-cell { grid-column: span 2; }
+      .hero-meta { position: static; display: block; padding: .65rem var(--page-pad) 1.1rem; }
+      .intro { min-height: 70vh; grid-template-columns: 1fr; gap: 1.2rem; }
+      .intro h2 { font-size: clamp(2.4rem, 9vw, 4rem); }
+      .orbit { grid-column: 1; margin: 1.5rem auto 0; }
+      .workflow { grid-template-columns: 1fr; gap: 2rem; }
+      .flow-map { min-height: 18rem; }
+      .feature-heading, .final { align-items: start; flex-direction: column; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .feature { min-height: 17rem; }
+      .feature-art { min-height: 7rem; }
+      footer { align-items: start; flex-direction: column; gap: .75rem; }
+    }
+    @media (max-width: 390px) {
+      .wordmark { font-size: .95rem; }
+      .arrow-link { width: 2.4rem; min-height: 2.4rem; }
+      .hero { padding-top: 8rem; }
+      .art-stage { height: 15rem; }
+      .node { font-size: .58rem; letter-spacing: .08em; }
+      .node-shape { width: 4rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a class="wordmark" href="#top" aria-label="AML Graph home"><span aria-hidden="true"></span>AML GRAPH</a>
+      <div class="nav-links" id="nav-links">
+        <a href="approach.html">Approach</a><a href="patterns.html">Patterns</a><a href="evaluation.html">Evaluation</a>
+      </div>
+      <div class="nav-actions">
+        <a class="arrow-link" href="../README.md" aria-label="Read project documentation">↗</a>
+        <a class="nav-cta" href="#workflow">Explore the system</a>
+        <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="nav-links">☰</button>
+      </div>
+    </nav>
+  </header>
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-top">
+        <div>
+          <p class="eyebrow">Temporal graph intelligence</p>
+          <h1 id="hero-title">Follow the flow.<br>Find the ring.</h1>
+        </div>
+        <div class="hero-copy">
+          <p>Layered laundering is a network of moves. AML Graph connects the transactions into a time-aware trail.</p>
+          <a class="text-link" href="#workflow">See how it works <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+      <div class="art-stage" aria-label="Abstract geometric illustration of connected transaction paths">
+        <span class="art-caption">Transactions, in context</span><span class="art-caption right">Time-respecting paths</span>
+        <div class="art-grid" aria-hidden="true">
+          <div class="tile sage half-round" style="--i:0"></div><div class="tile blank" style="--i:1"></div><div class="tile lime circle" style="--i:2"></div><div class="tile coral triangle" style="--i:3"></div><div class="tile lime triangle" style="--i:4"></div><div class="tile sage" style="--i:5"></div><div class="tile sky" style="--i:6"></div><div class="tile coral diamond" style="--i:7"></div><div class="tile apricot" style="--i:8"></div><div class="tile blue half-round" style="--i:9"></div><div class="tile sage" style="--i:10"></div><div class="tile blank" style="--i:11"></div><div class="tile sky" style="--i:12"></div><div class="tile lime" style="--i:13"></div>
+          <div class="tile sage" style="--i:14"></div><div class="tile lime circle" style="--i:15"></div><div class="tile coral" style="--i:16"></div><div class="tile blank diamond" style="--i:17"></div><div class="tile sky" style="--i:18"></div><div class="mark-cell tile" style="--i:19"><span class="mark">↝</span></div><div class="tile sky" style="--i:20"></div><div class="tile sage quarter" style="--i:21"></div><div class="tile sage quarter" style="--i:22"></div><div class="tile blank" style="--i:23"></div><div class="tile lime" style="--i:24"></div><div class="tile sky" style="--i:25"></div><div class="tile sage" style="--i:26"></div><div class="tile coral" style="--i:27"></div>
+          <div class="tile lime" style="--i:28"></div><div class="tile apricot quarter" style="--i:29"></div><div class="tile blank" style="--i:30"></div><div class="tile coral" style="--i:31"></div><div class="tile sage half-round" style="--i:32"></div><div class="tile lime" style="--i:33"></div><div class="tile sky" style="--i:34"></div><div class="tile lime" style="--i:35"></div><div class="tile apricot" style="--i:36"></div><div class="tile sage" style="--i:37"></div><div class="tile sky" style="--i:38"></div><div class="tile coral" style="--i:39"></div><div class="tile lime" style="--i:40"></div><div class="tile sage" style="--i:41"></div>
+          <div class="tile blank" style="--i:42"></div><div class="tile sky" style="--i:43"></div><div class="tile sage" style="--i:44"></div><div class="tile lime" style="--i:45"></div><div class="tile coral" style="--i:46"></div><div class="tile blank" style="--i:47"></div><div class="tile apricot" style="--i:48"></div><div class="tile sage" style="--i:49"></div><div class="tile sky" style="--i:50"></div><div class="tile lime" style="--i:51"></div><div class="tile blank" style="--i:52"></div><div class="tile coral" style="--i:53"></div><div class="tile sage" style="--i:54"></div><div class="tile sky" style="--i:55"></div>
+        </div>
+      </div>
+      <span class="hero-meta">Temporal · directed · connected</span>
+    </section>
+
+    <section class="section intro grid-paper" id="approach" aria-labelledby="approach-title">
+      <p class="hand">The pattern is in the path</p>
+      <div class="reveal"><h2 id="approach-title">A transaction makes more sense when you can see what came before—and what followed.</h2><div class="orbit" aria-hidden="true">↝</div></div>
+    </section>
+
+    <section class="section workflow reveal" id="workflow" aria-labelledby="workflow-title">
+      <div><p class="eyebrow">From edges to evidence</p><h2 id="workflow-title">See the structure.<br>Keep the sequence.</h2><p class="workflow-intro">A temporal, directed graph preserves parallel transfers and their order, so detection can follow connected behavior across accounts.</p></div>
+      <div class="flow-map" aria-label="Three stages: detect patterns, connect evidence, rank alerts">
+        <div class="flow-line" aria-hidden="true"></div>
+        <div class="node"><span class="node-shape">01</span><span>Detect</span></div>
+        <div class="node"><span class="node-shape"><span>02</span></span><span>Connect</span></div>
+        <div class="node"><span class="node-shape">03</span><span>Explain</span></div>
+      </div>
+    </section>
+
+    <section class="section features" id="capabilities" aria-labelledby="features-title">
+      <div class="feature-heading reveal"><div><p class="hand">Signals that work together</p><h2 id="features-title">Patterns leave<br>a shape.</h2></div><p>Purpose-built graph patterns reveal behaviors that a single transaction threshold can miss.</p></div>
+      <div class="feature-grid">
+        <article class="feature reveal"><h3>Fan in / fan out</h3><div class="feature-art dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div><p>Many counterparties gather around a hub within a measured time window.</p></article>
+        <article class="feature reveal"><h3>Cycles &amp; chains</h3><div class="feature-art" aria-hidden="true"><span class="asterisk">✳</span></div><p>Time-ordered paths trace round-tripping and rapid pass-through behavior.</p></article>
+        <article class="feature reveal"><h3>Evidence-led alerts</h3><div class="feature-art" aria-hidden="true"><span class="arc"></span></div><p>Ranked clusters keep their contributing accounts, transactions, and typologies in view.</p></article>
+      </div>
+    </section>
+
+    <section class="section final reveal" aria-labelledby="final-title">
+      <div><p class="eyebrow">Explore the backend</p><h2 id="final-title">A clearer view of connected activity.</h2></div>
+      <div><p>AML Graph is a research prototype evaluated on synthetic transaction patterns.</p><a class="text-link" href="../README.md">Read the project notes <span aria-hidden="true">↗</span></a></div>
+    </section>
+  </main>
+  <footer><a class="wordmark" href="#top"><span aria-hidden="true"></span>AML GRAPH</a><p>Temporal graph detection · Research prototype</p><a href="../README.md">Project documentation ↗</a></footer>
+  <script>
+    const nav = document.querySelector('.site-nav');
+    const menuButton = document.querySelector('.menu-toggle');
+    const links = document.querySelector('.nav-links');
+    window.addEventListener('scroll', () => nav.classList.toggle('is-scrolled', window.scrollY > 24), { passive: true });
+    menuButton.addEventListener('click', () => {
+      const open = menuButton.getAttribute('aria-expanded') !== 'true';
+      menuButton.setAttribute('aria-expanded', String(open));
+      menuButton.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+      links.classList.toggle('is-open', open);
+    });
+    links.addEventListener('click', event => {
+      if (event.target.closest('a')) { links.classList.remove('is-open'); menuButton.setAttribute('aria-expanded', 'false'); menuButton.setAttribute('aria-label', 'Open navigation'); }
+    });
+    if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }
+      }), { threshold: .15 });
+      document.querySelectorAll('.reveal').forEach(element => observer.observe(element));
+    } else document.querySelectorAll('.reveal').forEach(element => element.classList.add('is-visible'));
+  </script>
+</body>
+</html>

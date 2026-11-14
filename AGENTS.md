@@ -4,8 +4,9 @@
 
 Read `ARCHITECTURE1.md` as the authoritative architecture. Keep its filename.
 The user's backend request and clarifications recorded here override conflicting
-architecture text. Implement backend only: `src/aml/`, configuration, tests, CLI,
-documentation, JSON and Markdown outputs. No frontend or `aml demo`. Replace M4
+architecture text. Backend source is in `backend/src/aml/`; its configuration
+and tests are in `backend/configs/` and `backend/tests/`. Keep frontend assets in
+`frontend/` and out of backend modules. No `aml demo`. Replace M4
 with fan detection through one schema-valid alert and a template summary. Skip
 M13; retain backend README work. M12 uses an offline stub behind `LLMClient` only.
 
@@ -25,7 +26,7 @@ M13; retain backend README work. M12 uses an offline stub behind `LLMClient` onl
 ## Engineering conventions (section 17)
 
 - Type hints everywhere; Pydantic at module boundaries.
-- No hard-coded thresholds or weights: use `configs/default.yaml`.
+- No hard-coded thresholds or weights: use `backend/configs/default.yaml`.
 - Fixed seeds; deterministic detectors and metrics.
 - Never access test-period inputs inside tuning code; enforce with assertions.
 - Do not change `eval/metrics.py` without updating its tests.

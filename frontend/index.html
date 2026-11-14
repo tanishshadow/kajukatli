@@ -181,6 +181,11 @@
     .final.editorial-incoming { background:color-mix(in srgb,var(--apricot) 18%,var(--paper)); opacity:1; transform:none; transition:none; }
     @media(max-width:760px) { .editorial-incoming { border-radius:32px 32px 0 0; } }
     @media(prefers-reduced-motion:reduce) { .editorial-outgoing { position:relative; top:auto; } .editorial-incoming { border-radius:0; } }
+    #kinetic-ring { display:inline-block; position:relative; cursor:grab; touch-action:none; user-select:none; }
+    #kinetic-ring.is-dragging { cursor:grabbing; z-index:3; }
+    #kinetic-ring:focus-visible { outline:2px solid var(--coral); outline-offset:6px; }
+    .drag-help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    @media(max-width:600px) { #kinetic-ring { cursor:auto; touch-action:pan-y; user-select:text; } }
   </style>
 </head>
 <body data-page="overview">
@@ -202,7 +207,8 @@
       <div class="hero-top">
         <div>
           <p class="eyebrow">Temporal graph intelligence</p>
-          <h1 id="hero-title">Follow the flow.<br>Find the ring.</h1>
+          <h1 id="hero-title">Follow the flow.<br><span id="kinetic-ring" tabindex="0" aria-describedby="ring-drag-help">Find the ring.</span></h1>
+          <span id="ring-drag-help" class="drag-help">Drag to move this headline. Arrow keys move it; Escape resets it. It returns when released.</span>
         </div>
         <div class="hero-copy">
           <p>Layered laundering is a network of moves. AML Graph connects the transactions into a time-aware trail.</p>
@@ -264,6 +270,64 @@
   </main>
   <footer><a class="wordmark" href="#top"><span aria-hidden="true"></span>AML GRAPH</a><p>Temporal graph detection · Research prototype</p><a href="../README.md">Project documentation ↗</a></footer>
   <script src="site-pages.js" defer></script>
+  <script>
+    (() => {
+      const target = document.getElementById('kinetic-ring');
+      const mobile = matchMedia('(max-width:600px)');
+      const reduced = matchMedia('(prefers-reduced-motion:reduce)');
+      let drag = null, frame = 0, animation = null, x = 0, y = 0;
+      const paint = () => { frame = 0; target.style.transform = `translate3d(${x}px,${y}px,0)`; };
+      const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
+      function reset() {
+        if (frame) { cancelAnimationFrame(frame); frame = 0; }
+        if (animation) animation.cancel();
+        if (!reduced.matches && (x || y)) {
+          animation = target.animate([
+            {transform:`translate3d(${x}px,${y}px,0)`},
+            {transform:`translate3d(${-x*.035}px,${-y*.035}px,0)`,offset:.8},
+            {transform:'translate3d(0,0,0)'}
+          ], {duration:380,easing:'cubic-bezier(.2,.7,.25,1)'});
+          animation.onfinish = () => { target.classList.remove('is-dragging'); animation = null; };
+        } else target.classList.remove('is-dragging');
+        x = y = 0; paint();
+      }
+      target.addEventListener('pointerdown', event => {
+        if (mobile.matches || !event.isPrimary || event.button !== 0) return;
+        if (animation) { animation.cancel(); animation = null; x = y = 0; paint(); }
+        const rect = target.getBoundingClientRect();
+        const area = target.closest('.hero').getBoundingClientRect();
+        const nav = document.querySelector('.site-nav').getBoundingClientRect();
+        drag = {id:event.pointerId, startX:event.clientX, startY:event.clientY,
+          minX:Math.max(-80,area.left+12-rect.left),maxX:Math.min(80,area.right-12-rect.right),
+          minY:Math.max(-45,nav.bottom+12-rect.top),maxY:45};
+        target.setPointerCapture(event.pointerId);
+        target.classList.add('is-dragging');
+        event.preventDefault();
+      });
+      target.addEventListener('pointermove', event => {
+        if (!drag || event.pointerId !== drag.id) return;
+        x = Math.max(drag.minX,Math.min(drag.maxX,event.clientX-drag.startX));
+        y = Math.max(drag.minY,Math.min(drag.maxY,event.clientY-drag.startY));
+        schedule();
+      });
+      function release(event) { if (!drag || event.pointerId !== drag.id) return; drag = null; reset(); }
+      target.addEventListener('pointerup',release);
+      target.addEventListener('pointercancel',release);
+      target.addEventListener('lostpointercapture',release);
+      target.addEventListener('keydown', event => {
+        if (mobile.matches) return;
+        if (event.key === 'Escape') { drag = null; reset(); }
+        if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) {
+          event.preventDefault(); if(animation) {animation.cancel();animation=null;}
+          x = Math.max(-40,Math.min(40,x+(event.key==='ArrowLeft'?-8:event.key==='ArrowRight'?8:0)));
+          y = Math.max(-24,Math.min(24,y+(event.key==='ArrowUp'?-8:event.key==='ArrowDown'?8:0))); schedule();
+        }
+      });
+      target.addEventListener('keyup',event => { if(event.key.startsWith('Arrow')) reset(); });
+      target.addEventListener('blur',reset);
+      window.addEventListener('resize',() => {drag=null;reset();},{passive:true});
+    })();
+  </script>
   <script>
     (() => {
       const panels = [...document.querySelectorAll('.editorial-outgoing')];

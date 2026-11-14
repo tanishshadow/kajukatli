@@ -417,7 +417,7 @@
       const edge = edges.find((item) => item.id === state.selectedEdge);
       fillDetails(details, [
         ['Transaction ID', edge.id], ['From account', edge.src], ['To account', edge.dst],
-        ['Amount sent', `${edge.amount} ${edge.currency}`], ['Timestamp', date(edge.ts)],
+        ['Amount sent', `${edge.amount} ${edge.currency}`], ['Timestamp (UTC)', date(edge.ts)],
         ['Dataset label', edge.label ? 'Positive benchmark label' : 'Negative benchmark label'],
       ]);
     } else if (state.selectedNode != null) {
@@ -532,10 +532,10 @@
   svg.addEventListener('pointercancel', releasePointer);
 
   function date(seconds) {
-    return seconds == null ? '—' : new Date(Number(seconds) * 1000).toLocaleString();
+    return seconds == null ? '—' : new Date(Number(seconds) * 1000).toLocaleString(undefined, { timeZone: 'UTC' });
   }
   function timeOnly(seconds) {
-    return new Date(Number(seconds) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return new Date(Number(seconds) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' });
   }
 
   initialize();

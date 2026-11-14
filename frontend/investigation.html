@@ -70,6 +70,7 @@
           <div class="sequence-topline"><span class="section-kicker">Transfer sequence</span><span id="timeline-label" class="timeline-label">No transactions</span></div>
           <div id="timeline-track" class="timeline-track" role="group" aria-label="Transaction timestamps"></div>
           <div class="timeline-ends"><span id="timeline-start">—</span><span id="timeline-end">—</span></div>
+          <p class="timeline-note">Times shown as dataset clock (UTC).</p>
           <div class="playback-controls">
             <div class="play-buttons"><button id="play" class="play-button">Play</button><button id="pause" disabled>Pause</button><button id="reset-play">Reset</button></div>
             <input id="timeline" type="range" min="0" max="0" value="0" aria-label="Transaction playback position" disabled>
@@ -112,7 +113,7 @@
       <div class="transaction-heading"><div><p class="section-kicker">Selected case evidence</p><h2 id="transaction-title">Transactions</h2></div><span id="transaction-count" class="subtle-count">No rows</span></div>
       <div class="table-scroll">
         <table class="transaction-table">
-          <thead><tr><th>Time</th><th>Source</th><th>Destination</th><th class="numeric">Amount sent</th><th>Currency</th><th>Label</th><th class="numeric">Transaction ID</th></tr></thead>
+          <thead><tr><th>Timestamp (UTC)</th><th>Source</th><th>Destination</th><th class="numeric">Amount sent</th><th>Currency</th><th>Label</th><th class="numeric">Transaction ID</th></tr></thead>
           <tbody id="transactions"><tr><td colspan="7" class="empty-row">Choose a case to load its matched transfers.</td></tr></tbody>
         </table>
       </div>

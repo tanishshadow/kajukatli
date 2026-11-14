@@ -13,4 +13,60 @@
     <section class="page-section"><div class="editorial-row reveal"><span class="step-number">CURRENCY</span><div><h2>Compare amounts with train-fitted FX.</h2><p>Pairwise median rates are learned from training transactions and chained through connected currency pairs. Missing conversions are recorded; amount checks on those hops are skipped.</p></div></div><div class="editorial-row reveal"><span class="step-number">BOUNDARIES</span><div><h2>Not every benchmark pattern is covered.</h2><p>Pattern names without a matching detector are reported as not covered. The dataset is synthetic, so these patterns describe benchmark behavior and do not establish real-world effectiveness.</p></div></div></section>
     <section class="page-section page-cta reveal"><div><p class="eyebrow">Read the system design</p><h2>See how edges become evidence.</h2></div><a class="nav-cta" href="approach.html">The approach ↗</a></section>
   </main><footer><a class="wordmark" href="index.html"><span aria-hidden="true"></span>AML GRAPH</a><p>Temporal graph detection · Research prototype</p><a href="../README.md">Project documentation ↗</a></footer><script src="site-pages.js" defer></script>
+<style>
+/* Progressive enhancement: normal document flow until the controller is ready. */
+.pattern-takeover { position:relative; isolation:isolate; overflow:clip; }
+.pattern-takeover.is-ready .page-hero { position:sticky; top:var(--hero-pin,0px); transform-origin:center bottom; transform:perspective(1600px) scale(var(--hero-scale,1)); }
+.pattern-takeover.is-ready .takeover-panel { position:relative; z-index:1; background:var(--paper); border-radius:var(--panel-radius,56px) var(--panel-radius,56px) 0 0; transform-origin:center top; transform:perspective(1600px) translateY(var(--panel-offset,0px)) rotateX(var(--panel-tilt,0deg)) scale(var(--panel-scale,1)); }
+.pattern-takeover.is-ready .page-hero { background-color:color-mix(in srgb,var(--sage) 16%,var(--paper)); }
+@media(max-width:760px) { .pattern-takeover.is-ready .takeover-panel { transform:perspective(2000px) translateY(var(--panel-offset,0px)) rotateX(var(--panel-tilt,0deg)) scale(var(--panel-scale,1)); } }
+@media(prefers-reduced-motion:reduce) {
+ .pattern-takeover.is-ready .page-hero { position:relative; top:auto; transform:none; }
+ .pattern-takeover.is-ready .takeover-panel { transform:none; border-radius:0; }
+}
+</style>
+<script>
+(() => {
+  const main = document.querySelector('body[data-page="patterns"] main');
+  if (!main) return;
+  const hero = main.querySelector('.page-hero');
+  const panel = hero?.nextElementSibling;
+  if (!hero || !panel) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'pattern-takeover';
+  hero.before(wrapper);
+  wrapper.append(hero, panel);
+  panel.classList.add('takeover-panel');
+  const reduced = matchMedia('(prefers-reduced-motion:reduce)');
+  let start = 0, height = 1, mobile = false, queued = false;
+  const clamp = value => Math.min(1, Math.max(0, value));
+  function render() {
+    queued = false;
+    if (reduced.matches) return;
+    const progress = clamp((scrollY + height - start) / (height * .9));
+    // A bounded 2px settling lobe is tied to scroll too: reversing the scroll
+    // reverses the whole surface, without residual time-based movement.
+    const settle = progress > .78 ? -Math.sin((progress - .78) / .22 * Math.PI) * 2 : 0;
+    wrapper.style.setProperty('--hero-scale', String(1 - .04 * progress));
+    wrapper.style.setProperty('--panel-scale', String(.98 + .02 * progress));
+    wrapper.style.setProperty('--panel-tilt', `${(mobile ? 2 : 4) * (1 - progress)}deg`);
+    wrapper.style.setProperty('--panel-offset', `${(mobile ? 14 : 26) * (1 - progress) + settle}px`);
+    wrapper.style.setProperty('--panel-radius', `${(mobile ? 32 : 60) - 8 * progress}px`);
+  }
+  function schedule() { if (!queued) { queued = true; requestAnimationFrame(render); } }
+  function measure() {
+    height = document.documentElement.clientHeight;
+    mobile = matchMedia('(max-width:760px)').matches;
+    start = wrapper.getBoundingClientRect().top + scrollY + hero.offsetHeight;
+    wrapper.style.setProperty('--hero-pin', `${Math.min(0, height - hero.offsetHeight)}px`);
+    wrapper.classList.add('is-ready');
+    schedule();
+  }
+  window.addEventListener('scroll', schedule, {passive:true});
+  window.addEventListener('resize', measure, {passive:true});
+  reduced.addEventListener('change', measure);
+  if ('ResizeObserver' in window) new ResizeObserver(measure).observe(hero);
+  measure();
+})();
+</script>
 </body></html>

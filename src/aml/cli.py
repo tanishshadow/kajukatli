@@ -56,5 +56,26 @@ def cluster(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tru
     typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
 
 
+@app.command()
+def tune(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+    import json
+    from aml.eval.tune import tune as run_tuning
+    typer.echo(json.dumps(run_tuning(Settings.from_yaml(config)), indent=2))
+
+
+@app.command()
+def evasion(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+    import json
+    from aml.eval.evasion import run
+    typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
+
+
+@app.command()
+def report(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+    import json
+    from aml.eval.report import run
+    typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
+
+
 if __name__ == "__main__":
     app()

@@ -115,13 +115,16 @@ def run(settings: Settings) -> dict[str, object]:
     payload = json.dumps(alerts, indent=2)
     (output / "alerts.json").write_text(payload + "\n")
     (settings.output_dir / "alerts.json").write_text(payload + "\n")
+    train_risk = probabilities(cluster_model, features.iloc[[i for i, c in enumerate(clusters)
+        if split.start <= c.t_start <= c.t_end < split.train_end]])
     report = {"command": "aml cluster", "clusters": len(clusters), "exported_alerts": len(alerts),
         "training_clusters": cluster_train_count, "positive_training_clusters": cluster_positive_count,
         "training_accounts": account_train_count, "positive_training_accounts": account_positive_count,
         "model_score_available": True, "test_evaluated": False, "cutoff_selected": False,
         "runtime_seconds": time.perf_counter() - started,
         "dampening": "explicit transparent-score reduction; legitimacy features supplied to learned models",
-        "scope": "initial M8 models, not M9 tuned/frozen models; export limit is not a decision threshold"}
+        "scope": "initial M8 models, not M9 tuned/frozen models; export limit is not a decision threshold",
+        "ranked_cluster_scores": str(output / "cluster_features.parquet")}
     (output / "report.json").write_text(json.dumps(report, indent=2))
     logging.getLogger("aml").removeHandler(handler)
     handler.close()

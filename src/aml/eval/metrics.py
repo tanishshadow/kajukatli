@@ -67,3 +67,12 @@ def evaluate(graph: TemporalGraph, clusters: list[Cluster], attempts: list[Attem
         "account": binary_metrics(np.isin(population, positive), acs[population] >= cutoff, acs[population]).model_dump(),
         "cluster": cluster_metrics(graph, local, tau, k), "attempt": attempt_recall(selected_attempts, clusters, tau_a),
         "positive_edges": int(graph.label[mask].sum()), "positive_accounts": len(positive), "account_population": len(population)}
+
+
+def choose_cutoff(truth: np.ndarray, scores: np.ndarray) -> tuple[float, dict[str, Any]]:
+    if truth.shape != scores.shape or truth.ndim != 1 or not np.isfinite(scores).all():
+        raise ValueError("cutoff inputs must be aligned finite vectors")
+    candidates = np.unique(np.r_[0., scores, 1.])
+    trials = [(float(c), binary_metrics(truth, scores >= c, scores)) for c in candidates]
+    cutoff, metrics = max(trials, key=lambda pair: (pair[1].f1, pair[0]))
+    return cutoff, {"cutoff": cutoff, "metrics": metrics.model_dump(), "candidates": len(candidates)}

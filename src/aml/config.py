@@ -42,6 +42,7 @@ class Settings(StrictModel):
     baseline_grid: dict[str, Any] = Field(default_factory=dict)
     evaluation: dict[str, Any] = Field(default_factory=dict)
     scoring: dict[str, Any] = Field(default_factory=dict)
+    evasion: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_fractions(self) -> "Settings":

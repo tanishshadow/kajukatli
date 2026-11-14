@@ -20,6 +20,8 @@ evaluation:
   bootstrap_replicates: 200
   confidence_level: 0.95
   tuning_trials: 16
+evasion:
+  strengths: [0.0, 0.25, 0.5, 0.75, 1.0]
 split_fractions: [0.6, 0.2, 0.2]
 # Full calendar-span fractions put almost all rows in train because of a sparse
 # September 11-18 tail. Timestamp quantiles retain that tail without dropping rows.
@@ -83,6 +85,9 @@ scoring:
     max_depth: 4
     learning_rate: 0.1
     n_jobs: 2
+  tuning_grid:
+    n_estimators: [50, 100]
+    max_depth: [3, 4]
   risk:
     weights: {fan_out: 10, fan_in: 10, scatter_gather: 20, gather_scatter: 20, cycle: 30, pass_through: 20}
     active_bin_fraction: 0.8

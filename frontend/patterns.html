@@ -16,6 +16,18 @@
 <style>
 /* Progressive enhancement: normal document flow until the controller is ready. */
 .pattern-takeover { position:relative; isolation:isolate; overflow:clip; }
+.detector-composition { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:clamp(2rem,5vw,5rem); align-items:start; margin-top:2.5rem; }
+.detector-composition .pattern-list { margin-top:0; }
+.detector-visual { position:sticky; top:6rem; margin:0; background:var(--sky); border-radius:1.5rem; overflow:hidden; transition:background .3s ease; }
+.detector-visual svg { display:block; width:100%; height:auto; }
+.detector-visual figcaption { padding:0 1.5rem 1.5rem; font-size:.75rem; color:#454640; }
+.detector-composition .pattern { transition:background .2s ease; }
+.detector-composition .pattern.is-active { background:color-mix(in srgb,var(--sage) 22%,var(--paper)); }
+.detector-choice { position:relative; font:inherit; letter-spacing:inherit; text-align:left; color:inherit; background:none; border:0; padding:0; cursor:pointer; }
+.detector-choice::after { content:'↗'; position:absolute; right:-1.2em; top:.15em; font-size:.65em; opacity:0; transition:opacity .2s ease; }
+.detector-choice:hover::after,.detector-choice[aria-pressed="true"]::after { opacity:1; }
+.detector-choice:focus-visible { outline:2px solid var(--ink); outline-offset:5px; }
+@media(max-width:760px) { .detector-composition { grid-template-columns:1fr; } .detector-visual { position:relative; top:auto; grid-row:1; max-width:32rem; width:100%; justify-self:center; } }
 .pattern-takeover.is-ready .page-hero { position:sticky; top:var(--hero-pin,0px); transform-origin:center bottom; transform:perspective(1600px) scale(var(--hero-scale,1)); }
 .pattern-takeover.is-ready .takeover-panel { position:relative; z-index:1; background:var(--paper); border-radius:var(--panel-radius,56px) var(--panel-radius,56px) 0 0; transform-origin:center top; transform:perspective(1600px) translateY(var(--panel-offset,0px)) rotateX(var(--panel-tilt,0deg)) scale(var(--panel-scale,1)); }
 .pattern-takeover.is-ready .page-hero { background-color:color-mix(in srgb,var(--sage) 16%,var(--paper)); }
@@ -37,6 +49,48 @@
   hero.before(wrapper);
   wrapper.append(hero, panel);
   panel.classList.add('takeover-panel');
+  const list = panel.querySelector('.pattern-list');
+  const composition = document.createElement('div');
+  composition.className = 'detector-composition';
+  list.before(composition);
+  composition.append(list);
+  const visual = document.createElement('figure');
+  visual.className = 'detector-visual';
+  visual.setAttribute('aria-label', 'Illustrative detector structure');
+  composition.append(visual);
+  const diagrams = {
+    fan: {points:[[80,90],[80,200],[80,310],[260,200],[430,90],[430,310]], links:[[0,3],[1,3],[2,3],[3,4],[3,5]],color:'var(--sky)'},
+    scatter: {points:[[70,200],[250,90],[250,200],[250,310],[430,200]],links:[[0,1],[0,2],[0,3],[1,4],[2,4],[3,4]],color:'var(--sage)'},
+    cycle: {points:[[250,70],[430,200],[250,330],[70,200]],links:[[0,1],[1,2],[2,3],[3,0]],color:'var(--apricot)'},
+    pass: {points:[[65,200],[185,200],[305,200],[435,200]],links:[[0,1],[1,2],[2,3]],color:'var(--blue)'}
+  };
+  const choices = [];
+  function select(article, focus = false) {
+    const key = article.dataset.patternId;
+    const diagram = diagrams[key];
+    choices.forEach(button => { const active = button.closest('.pattern') === article; button.setAttribute('aria-pressed', String(active)); button.closest('.pattern').classList.toggle('is-active', active); });
+    visual.style.background = diagram.color;
+    // These diagrams describe motif topology only; no dataset evidence is generated.
+    visual.innerHTML = `<svg viewBox="0 0 500 400" role="img" aria-label="${article.querySelector('h2').textContent} illustrative structure"><defs><marker id="motif-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="currentColor"/></marker></defs>${diagram.links.map(([a,b]) => {const [x1,y1]=diagram.points[a], [x2,y2]=diagram.points[b];const dx=x2-x1,dy=y2-y1,length=Math.hypot(dx,dy);return `<line x1="${x1+dx/length*20}" y1="${y1+dy/length*20}" x2="${x2-dx/length*25}" y2="${y2-dy/length*25}" stroke="currentColor" stroke-width="2" marker-end="url(#motif-arrow)"/>`;}).join('')}${diagram.points.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${key==='fan'&&i===3?25:17}" fill="${i===0?'var(--paper)':'var(--ink)'}" stroke="var(--ink)" stroke-width="2"/>`).join('')}</svg><figcaption>Illustrative structure · ${article.querySelector('h2').textContent}</figcaption>`;
+    if (!matchMedia('(prefers-reduced-motion:reduce)').matches) visual.querySelector('svg').animate([{opacity:.3,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,.7,.2,1)'});
+    if(focus) article.querySelector('button').focus();
+  }
+  list.querySelectorAll('.pattern').forEach(article => {
+    const heading = article.querySelector('h2');
+    const button = document.createElement('button');
+    button.className = 'detector-choice'; button.type = 'button';
+    button.textContent = heading.textContent;
+    heading.replaceChildren(button); choices.push(button);
+    button.addEventListener('click', () => select(article));
+    button.addEventListener('keydown', event => {
+      if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      const index = choices.indexOf(button);
+      const next = event.key==='Home'?0:event.key==='End'?choices.length-1:(index+(event.key==='ArrowDown'?1:-1)+choices.length)%choices.length;
+      select(choices[next].closest('.pattern'),true);
+    });
+  });
+  select(list.querySelector('.pattern'));
   const reduced = matchMedia('(prefers-reduced-motion:reduce)');
   let start = 0, height = 1, mobile = false, queued = false;
   const clamp = value => Math.min(1, Math.max(0, value));

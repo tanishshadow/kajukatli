@@ -252,3 +252,13 @@ evaluation and confidence intervals. No test-period metrics have been computed.
 Planning assumes CPU-only execution and one or two people for one or two days;
 the team/time values remain placeholders. Host RAM and loading peak memory are
 measured in the checklist. The user authorized completing through M8 without pauses.
+
+## Limitations / not done
+
+- M10 is reduced and NOT COMPLETE: only amount splitting at strengths 0 and 1.0
+  was run on validation. Delays and decoys were not run. The main system's
+  attempt/account recall was 0.0 at both strengths; the baseline's attempt
+  recall was 0.2632 at strength 0 and 1.0 at strength 1.0.
+- M11 still needs the single final test report. Sensitivity tables, baseline
+  clustering variants, difference confidence intervals, and straddler lists
+  are not done.

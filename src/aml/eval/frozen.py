@@ -2,18 +2,28 @@
 import hashlib
 import json
 from pathlib import Path
+import yaml
 
 
 def frozen_hash(settings) -> str:
-    paths = [settings.output_dir / "m9" / "frozen.yaml",
+    frozen_path = settings.output_dir / "m9" / "frozen.yaml"
+    frozen = yaml.safe_load(frozen_path.read_text(encoding="utf-8"))
+    model = frozen["model"]
+    paths = [frozen_path,
+             settings.output_dir / "m9" / f"model_{model['n_estimators']}_{model['max_depth']}.json",
              settings.output_dir / "m8" / "cluster_model.json",
              settings.output_dir / "m8" / "account_model.json",
-             Path("configs/default.yaml")]
+             settings.output_dir / "m3" / "baseline.json",
+             Path("configs/default.yaml"),
+             Path("src/aml/detect/fan.py"), Path("src/aml/detect/scatter_gather.py"),
+             Path("src/aml/detect/cycles.py"), Path("src/aml/detect/passthrough.py"),
+             Path("src/aml/cluster/merge.py"), Path("src/aml/score/features.py"),
+             Path("src/aml/score/model.py"), Path("src/aml/score/risk.py")]
     digest = hashlib.sha256()
     for path in paths:
         if not path.is_file():
             raise FileNotFoundError(f"frozen artifact missing: {path}")
-        digest.update(path.name.encode())
+        digest.update(str(path).encode())
         digest.update(path.read_bytes())
     return digest.hexdigest()
 

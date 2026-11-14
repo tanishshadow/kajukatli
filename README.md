@@ -1,5 +1,12 @@
 # AML Graph backend
 
+**Test-period disclosure:** `aml report` was invoked twice before the one-shot
+guard was added; those reports are archived as exploratory outputs. Detector
+and scoring code changed afterward in uncommitted work (including the M8 report
+serialization path), and the tuning configuration also changed. The reports
+therefore are not a valid final result. The new frozen hash guard is intended to
+protect the next final run; a final run must occur only after M10/M12 freeze.
+
 Backend implementation of **Graph-Based Detection of Layered Money Laundering
 Networks**, Build Beyond'26 PS 2.1. The specification is
 [ARCHITECTURE1.md](ARCHITECTURE1.md), with user-approved clarifications in

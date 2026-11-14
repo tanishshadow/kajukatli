@@ -1,0 +1,42 @@
+# Final test report
+
+Command: `aml report`
+
+```json
+{
+  "command": "aml report",
+  "test_evaluated_once": true,
+  "cutoff_frozen": 0.8506366014480591,
+  "cluster": {
+    "tp": 273,
+    "fp": 2339,
+    "fn": 368,
+    "tn": 207891,
+    "precision": 0.10451761102603369,
+    "recall": 0.42589703588143524,
+    "f1": 0.1678450660928374,
+    "pr_auc": 0.2437577590746198
+  },
+  "account": {
+    "tp": 546,
+    "fp": 4463,
+    "fn": 1655,
+    "tn": 349732,
+    "precision": 0.10900379317228988,
+    "recall": 0.24806905951840072,
+    "f1": 0.15145631067961166,
+    "pr_auc": 0.15163768380660586
+  },
+  "account_f1_block_bootstrap": {
+    "f1": 0.15145631067961166,
+    "lower": 0.010972812521082101,
+    "upper": 0.1615523621779574,
+    "blocks": 92442,
+    "replicates": 200
+  },
+  "test_transactions": 1015882,
+  "positive_test_transactions": 1798,
+  "attempts_by_start_period": 95,
+  "test_access_in_tuning": false
+}
+```

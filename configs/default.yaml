@@ -58,6 +58,11 @@ detectors:
     expansion_budget: 10000
   pass_through:
     dwell_seconds: 236820
+    rho_lo: 0.8
+    eps: 0.1
+    top_m: 3
+    min_links: 2
+    max_paths_per_component: 100
   merge:
     window_seconds: 79920
   baseline:

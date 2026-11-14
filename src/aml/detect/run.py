@@ -27,6 +27,9 @@ def run(settings: Settings, detector: str) -> dict:
     elif detector == "cycle":
         from aml.detect.cycles import CycleConfig, detect_cycles
         hits = detect_cycles(graph, CycleConfig(**settings.detectors["cycle"], fx=fx))
+    elif detector == "pass_through":
+        from aml.detect.passthrough import PassConfig, detect_passthrough
+        hits = detect_passthrough(graph, PassConfig(**settings.detectors["pass_through"], fx=fx))
     else:
         raise ValueError("detector not implemented yet")
     output = settings.output_dir / detector

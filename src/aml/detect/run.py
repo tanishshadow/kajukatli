@@ -11,6 +11,10 @@ from aml.detect.fan import FanConfig, detect_fans
 
 def run(settings: Settings, detector: str) -> dict:
     start = time.perf_counter()
+    output = settings.output_dir / detector
+    output.mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler(output / "detector.log", mode="w")
+    logging.getLogger("aml.detect").addHandler(handler)
     directory = settings.data.processed_dir
     graph = load_graph(directory / "transactions.parquet", directory / "accounts.parquet")
     split = TemporalSplit.model_validate_json((directory / "split.json").read_text())
@@ -20,6 +24,9 @@ def run(settings: Settings, detector: str) -> dict:
     elif detector == "scatter_gather":
         from aml.detect.scatter_gather import ScatterConfig, detect_scatter_gather
         hits = detect_scatter_gather(graph, ScatterConfig(**settings.detectors["scatter_gather"], fx=fx))
+    elif detector == "cycle":
+        from aml.detect.cycles import CycleConfig, detect_cycles
+        hits = detect_cycles(graph, CycleConfig(**settings.detectors["cycle"], fx=fx))
     else:
         raise ValueError("detector not implemented yet")
     output = settings.output_dir / detector
@@ -35,4 +42,6 @@ def run(settings: Settings, detector: str) -> dict:
               "mapped_currencies": len(fx.factors), "test_evaluated": False,
               "command": f"aml detect --detector {detector}"}
     (output / "report.json").write_text(json.dumps(report, indent=2))
+    logging.getLogger("aml.detect").removeHandler(handler)
+    handler.close()
     return report

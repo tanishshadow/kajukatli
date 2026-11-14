@@ -51,6 +51,11 @@ detectors:
     eps: 0.1
   cycle:
     window_seconds: 319440
+    max_length: 10
+    rho_lo: 0.8
+    eps: 0.1
+    deg_cap: 100
+    expansion_budget: 10000
   pass_through:
     dwell_seconds: 236820
   merge:

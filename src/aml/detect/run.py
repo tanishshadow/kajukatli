@@ -15,9 +15,13 @@ def run(settings: Settings, detector: str) -> dict:
     graph = load_graph(directory / "transactions.parquet", directory / "accounts.parquet")
     split = TemporalSplit.model_validate_json((directory / "split.json").read_text())
     fx = fit_fx(graph, split.train_end)
-    if detector != "fan":
+    if detector == "fan":
+        hits = detect_fans(graph, FanConfig(**settings.detectors["fan"], fx=fx))
+    elif detector == "scatter_gather":
+        from aml.detect.scatter_gather import ScatterConfig, detect_scatter_gather
+        hits = detect_scatter_gather(graph, ScatterConfig(**settings.detectors["scatter_gather"], fx=fx))
+    else:
         raise ValueError("detector not implemented yet")
-    hits = detect_fans(graph, FanConfig(**settings.detectors["fan"], fx=fx))
     output = settings.output_dir / detector
     output.mkdir(parents=True, exist_ok=True)
     with (output / "hits.json").open("w") as stream:

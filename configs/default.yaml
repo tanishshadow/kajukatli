@@ -47,6 +47,8 @@ detectors:
     m: 3
     m_in: 2
     m_out: 3
+    rho_lo: 0.8
+    eps: 0.1
   cycle:
     window_seconds: 319440
   pass_through:

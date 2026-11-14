@@ -51,6 +51,30 @@ the project folder. Then run:
 This creates the smaller files the app uses under `data/processed/`. The raw
 dataset files are left as they are. You can skip this step if `data/processed/`
 already contains the prepared files.
+Official dataset sources
+
+Download the dataset from either of these sources:
+
+Option 1 — Kaggle (recommended)
+
+IBM Transactions for Anti-Money Laundering (AML) — Kaggle
+
+Option 2 — IBM original dataset
+
+IBM AML Dataset — Box
+
+Kaggle may require an account to download the files.
+
+Required files
+
+The current preprocessing instructions require:
+
+HI-Small_Trans.csv
+HI-Small_Patterns.txt
+
+The HI-Small distribution also includes:
+
+HI-Small_accounts.csv
 
 ### 3. Create detector results (first setup, or after preparing new data)
 

@@ -1,0 +1,8 @@
+# M0: algorithm parameters are intentionally unset until the M1 checklist.
+# Do not interpret this scaffold as an executable pipeline configuration.
+seed: 42
+data:
+  transactions: HI-Small_Trans.csv
+  patterns: HI-Small_Patterns.txt
+  processed_dir: data/processed
+output_dir: outputs

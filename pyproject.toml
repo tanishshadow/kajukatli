@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aml-graph"
+version = "0.0.0"
+description = "Backend for temporal graph detection of synthetic laundering patterns"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "numpy", "pandas", "pyarrow", "numba", "networkx", "xgboost",
+    "scikit-learn", "pydantic>=2,<3", "pyyaml", "typer", "psutil",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

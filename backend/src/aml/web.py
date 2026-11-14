@@ -44,6 +44,27 @@ def _hit_rows(path: Path):
 def _investigation(endpoint: str, query: dict[str, list[str]], settings: Settings) -> dict[str, Any] | None:
     import pyarrow.dataset as ds
 
+    if endpoint == "investigation/account":
+        raw_account = query.get("id", [""])[0]
+        try:
+            account_id = int(raw_account)
+        except (TypeError, ValueError):
+            return {"error": "invalid account id", "cases": [], "total": 0}
+        matches = []
+        for detector, (folder, _, typologies) in _DETECTORS.items():
+            for raw_index, hit in enumerate(_hit_rows(settings.output_dir / folder / "hits.json")):
+                if hit.get("typology") not in typologies:
+                    continue
+                if account_id not in (int(value) for value in hit.get("accounts", [])):
+                    continue
+                matches.append({"detector": detector, "id": raw_index, "typology": hit["typology"],
+                    "edge_count": len(hit.get("edge_ids", [])), "account_count": len(hit.get("accounts", [])),
+                    "t_start": hit.get("t_start"), "t_end": hit.get("t_end"),
+                    "total_value": hit.get("total_value"),
+                    "currency": hit.get("meta", {}).get("value_currency")})
+        total = len(matches)
+        return {"account": account_id, "cases": matches[:100], "total": total, "truncated": total > 100}
+
     if endpoint == "investigation/detectors":
         return {"detectors": [{"id": key, "label": label,
             "available": (settings.output_dir / folder / "hits.json").is_file(),

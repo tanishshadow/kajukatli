@@ -9,6 +9,10 @@
   const nodeLayer = byId('nodes');
   const timeline = byId('timeline');
   const transactions = byId('transactions');
+  const accountForm = byId('account-form');
+  const accountInput = byId('account-id');
+  const accountStatus = byId('account-status');
+  const accountResults = byId('account-results');
   const state = {
     detector: '', offset: 0, cases: [], payload: null, selectedEdge: null,
     selectedNode: null, playback: 0, timer: null,
@@ -537,6 +541,75 @@
   function timeOnly(seconds) {
     return new Date(Number(seconds) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' });
   }
+
+  accountForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const id = accountInput.value.trim();
+    accountResults.replaceChildren();
+    accountResults.hidden = true;
+    accountStatus.classList.remove('error');
+    if (!/^\d+$/.test(id)) {
+      accountStatus.textContent = 'Enter a numeric account ID.';
+      return;
+    }
+    accountStatus.textContent = 'Searching detector results…';
+    try {
+      const data = await getJSON(`/api/investigation/account?id=${encodeURIComponent(id)}`);
+      if (!data.total) {
+        accountStatus.textContent = 'No detector case includes this account.';
+        return;
+      }
+      accountStatus.textContent = `Account ${id} appears in ${data.total} case(s).${data.truncated ? ` Showing first 100 of ${data.total}.` : ''}`;
+      accountResults.hidden = false;
+      data.cases.forEach((result) => {
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        const label = typologyLabels[result.typology] || result.typology;
+        const value = `${Number(result.total_value).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${result.currency || ''}`.trim();
+        [label, `${result.account_count} accounts · ${result.edge_count} transfers`, value, date(result.t_start)]
+          .forEach((text) => {
+            const span = document.createElement('span');
+            span.textContent = text;
+            button.append(span);
+          });
+        button.addEventListener('click', async () => {
+          stopPlayback();
+          clearCase();
+          state.detector = result.detector;
+          detector.value = result.detector;
+          state.offset = 0;
+          state.cases = [];
+          caseSelect.replaceChildren(new Option(
+            `#${result.id} · ${label} · ${result.account_count} accounts · ${result.edge_count} transfers · ${value}`,
+            String(result.id),
+          ));
+          caseSelect.value = String(result.id);
+          caseSelect.disabled = false;
+          byId('more-cases').hidden = true;
+          await loadCase(result.id);
+          accountResults.querySelectorAll('button[aria-current="true"]')
+            .forEach((selected) => selected.removeAttribute('aria-current'));
+          button.setAttribute('aria-current', 'true');
+          if (state.payload?.nodes.some((node) => Number(node.id) === Number(id))) selectNode(Number(id));
+        });
+        item.append(button);
+        accountResults.append(item);
+      });
+    } catch (error) {
+      accountStatus.textContent = error.message;
+      accountStatus.classList.add('error');
+    }
+  });
+
+  accountInput.addEventListener('input', () => {
+    if (accountInput.value === '') {
+      accountResults.replaceChildren();
+      accountResults.hidden = true;
+      accountStatus.textContent = '';
+      accountStatus.classList.remove('error');
+    }
+  });
 
   initialize();
 })();

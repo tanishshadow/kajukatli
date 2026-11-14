@@ -48,6 +48,18 @@
       <span id="status" class="status" role="status">Loading real detector outputs…</span>
     </section>
 
+    <section class="account-search" aria-label="Find cases by account">
+      <form id="account-form" class="account-form" novalidate>
+        <label for="account-id">Find by account</label>
+        <div class="account-field">
+          <input id="account-id" type="text" inputmode="numeric" autocomplete="off" placeholder="Account ID">
+          <button type="submit" class="account-submit">Search</button>
+        </div>
+      </form>
+      <p id="account-status" class="account-status" role="status" aria-live="polite"></p>
+      <ul id="account-results" class="account-results" hidden></ul>
+    </section>
+
     <section class="investigation-layout">
       <div class="network-column">
         <div class="network-heading">

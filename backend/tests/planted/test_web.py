@@ -95,3 +95,60 @@ def test_investigation_api_returns_real_hit_summaries_and_exact_subgraph(tmp_pat
     assert [node["id"] for node in subgraph["nodes"]] == [1, 2, 3]
     assert set(subgraph["currencies"]) == {"USD"}
     assert all(edge["id"] != 99 for edge in subgraph["edges"])
+
+
+def test_investigation_account_finds_cases_with_case_endpoint_ids(tmp_path):
+    settings = Settings(output_dir=tmp_path / "outputs")
+    fan_path = settings.output_dir / "fan" / "hits.json"
+    fan_hits = [
+        {"typology": "unrelated", "accounts": [7]},
+        {"typology": "fan_out", "accounts": ["7", 8], "edge_ids": [1, 2],
+         "t_start": 10, "t_end": 20, "total_value": 50, "meta": {"value_currency": "USD"}},
+    ]
+    fan_path.parent.mkdir(parents=True)
+    fan_path.write_text("[\n" + ",\n".join(json.dumps(hit) for hit in fan_hits) + "\n]\n", encoding="utf-8")
+    cycle_hits = [
+        {"typology": "cycle", "accounts": [7, 9], "edge_ids": [3],
+         "t_start": 30, "t_end": 40, "total_value": 25, "meta": {"value_currency": "EUR"}},
+    ]
+    cycle_path = settings.output_dir / "cycle" / "hits.json"
+    cycle_path.parent.mkdir(parents=True)
+    cycle_path.write_text("[\n" + ",\n".join(json.dumps(hit) for hit in cycle_hits) + "\n]\n", encoding="utf-8")
+
+    result = api_data("investigation/account", settings, {"id": ["7"]})
+    fan_cases = api_data("investigation/cases", settings, {"detector": ["fan"], "offset": ["0"], "limit": ["30"]})
+    cycle_cases = api_data("investigation/cases", settings, {"detector": ["cycle"], "offset": ["0"], "limit": ["30"]})
+    assert result["account"] == 7 and result["total"] == 2 and result["truncated"] is False
+    assert [(case["detector"], case["id"]) for case in result["cases"]] == [("fan", 1), ("cycle", 0)]
+    assert result["cases"][0]["id"] == fan_cases["cases"][0]["id"]
+    assert result["cases"][1]["id"] == cycle_cases["cases"][0]["id"]
+    assert result["cases"][0]["currency"] == "USD"
+
+
+def test_investigation_account_handles_missing_invalid_and_unmatched_ids(tmp_path):
+    settings = Settings(output_dir=tmp_path / "outputs")
+    missing = api_data("investigation/account", settings, {})
+    invalid = api_data("investigation/account", settings, {"id": ["7x"]})
+    absent = api_data("investigation/account", settings, {"id": ["7"]})
+    assert missing == {"error": "invalid account id", "cases": [], "total": 0}
+    assert invalid == {"error": "invalid account id", "cases": [], "total": 0}
+    assert absent == {"account": 7, "cases": [], "total": 0, "truncated": False}
+
+
+def test_investigation_account_caps_results_and_only_reads_hits(tmp_path):
+    settings = Settings(output_dir=tmp_path / "outputs")
+    hits_path = settings.output_dir / "fan" / "hits.json"
+    hits = [{"typology": "fan_out", "accounts": [12], "edge_ids": [index],
+             "t_start": index, "t_end": index, "total_value": index, "meta": {}}
+            for index in range(101)]
+    hits_path.parent.mkdir(parents=True)
+    hits_path.write_text("[\n" + ",\n".join(json.dumps(hit) for hit in hits) + "\n]\n", encoding="utf-8")
+    before = {path: path.read_bytes() for path in settings.output_dir.rglob("*") if path.is_file()}
+
+    result = api_data("investigation/account", settings, {"id": ["12"]})
+
+    after = {path: path.read_bytes() for path in settings.output_dir.rglob("*") if path.is_file()}
+    assert result["total"] == 101 and result["truncated"] is True
+    assert len(result["cases"]) == 100
+    assert [case["id"] for case in result["cases"]] == list(range(100))
+    assert after == before

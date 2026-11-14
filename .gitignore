@@ -6,8 +6,8 @@
 *.zip
 *.tar
 *.gz
-data/
-outputs/
+/data/
+/outputs/
 
 # Python, environments and local credentials.
 __pycache__/

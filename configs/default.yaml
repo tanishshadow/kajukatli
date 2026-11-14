@@ -1,8 +1,49 @@
-# M0: algorithm parameters are intentionally unset until the M1 checklist.
-# Do not interpret this scaffold as an executable pipeline configuration.
+# All fitted settings are emitted to outputs/m1/measured_config.yaml by prepare.
+# Remaining detector thresholds are added in their implementation milestones.
 seed: 42
 data:
   transactions: HI-Small_Trans.csv
   patterns: HI-Small_Patterns.txt
   processed_dir: data/processed
+  chunk_rows: 100000
 output_dir: outputs
+split_fractions: [0.6, 0.2, 0.2]
+# Full calendar-span fractions put almost all rows in train because of a sparse
+# September 11-18 tail. Timestamp quantiles retain that tail without dropping rows.
+split_method: timestamp_quantiles
+derivation:
+  duration_quantile: 0.9
+  size_quantile: 0.25
+  fallback_window_fraction: 0.25
+  merge_window_fraction: 0.25
+  minimum_counterparties: 2
+  minimum_window_seconds: 1
+  degree_quantiles: [0.0, 0.25, 0.5, 0.75, 0.9, 0.99, 1.0]
+  regularity_bins: 6
+  active_bin_fraction: 0.8
+  maximum_count_cv: 0.5
+# Initial settings measured in M1 from fully contained train attempts. Prepare
+# recomputes these from the policy above and records provenance in its report.
+# They are not tuned values; future milestones add remaining amount/cap rules.
+detectors:
+  fan:
+    window_seconds: 318180
+    k: 2
+  scatter_gather:
+    window_seconds: 341520
+    m: 3
+    m_in: 2
+    m_out: 3
+  cycle:
+    window_seconds: 319440
+  pass_through:
+    dwell_seconds: 236820
+  merge:
+    window_seconds: 79920
+  baseline:
+    window_seconds: 318180
+  dampening:
+    regularity_window_seconds: 480900
+    bins: 6
+    active_bin_fraction: 0.8
+    maximum_count_cv: 0.5

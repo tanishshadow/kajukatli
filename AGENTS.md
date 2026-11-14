@@ -30,7 +30,9 @@ M13; retain backend README work. M12 uses an offline stub behind `LLMClient` onl
 - Detectors are pure functions of `(TemporalGraph, config)`.
 - Log every cap and budget trigger so truncation is visible.
 - Do not copy reference repository code. Verify references before citing them.
-- Python 3.11; NumPy/Pandas, Numba, XGBoost or LightGBM, scikit-learn,
+- Use the installed Python (currently 3.13), as explicitly authorized by the
+  user after M0. Do not install another interpreter. NumPy/Pandas, Numba,
+  XGBoost or LightGBM, scikit-learn,
   Pydantic, PyYAML, Typer, pytest. NetworkX only for small cluster subgraphs.
 
 ## Data protection and preparation

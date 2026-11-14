@@ -5,34 +5,93 @@ Networks**, Build Beyond'26 PS 2.1. The specification is
 [ARCHITECTURE1.md](ARCHITECTURE1.md), with user-approved clarifications in
 [AGENTS.md](AGENTS.md).
 
-M0 provides scaffolding only. No data has been loaded, no detectors or CLI
-commands exist yet, and no real-data results have been produced. M4 will produce
-a backend fan-detection slice and alerts JSON. Frontend work and M13 are excluded.
+M1 implements compact loading, exact pattern membership, period-local labels,
+temporal splits, and the data checklist. No detectors or model evaluations exist
+yet. M4 will produce a backend fan-detection slice and alerts JSON. Frontend work
+and M13 are excluded.
 
 ## Environment
 
-Python **3.11** is required. The current environment check found Python 3.13.7
-only through the Windows Python launcher; a 3.11 interpreter is needed before
-implementation validation. Dependencies are declared in `pyproject.toml`;
-reproducible version locking follows installation and compatibility validation.
+The user authorized the existing **Python 3.13.7** instead of installing the
+architecture's Python 3.11. No interpreter was installed. The project `.venv`
+uses that interpreter and existing system packages. M1 dependencies are present;
+Numba is not installed and will be needed before the search-detector milestones.
+Compatibility of future milestones is not yet established.
 
-Once Python 3.11 is available:
+The environment was created and the local package installed without downloading
+dependencies:
 
 ```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python -m pip install -e ".[dev]"
+python -m venv --system-site-packages .venv
+.\.venv\Scripts\python -m pip install --no-deps --no-build-isolation -e .
 .\.venv\Scripts\python -m pytest -q
+.\.venv\Scripts\aml prepare --config configs/default.yaml
+# Subsequent checklist runs use the existing Parquet:
+.\.venv\Scripts\aml prepare --config configs/default.yaml --reuse
 ```
 
-No functional tests exist yet. `pytest -q` in M0 therefore collects no tests;
-this is not a passing test suite. The M0 runner reported a nonzero exit status.
+`python -m aml prepare --config configs/default.yaml` is equivalent after
+activation. Dependency declarations are in `pyproject.toml`; no full dependency
+lock is claimed for unimplemented milestones.
 
 ## Data and outputs
 
 Use the existing `HI-Small_Trans.csv` and `HI-Small_Patterns.txt` at the project
 root. `HI-Small_accounts.csv` is optional and initially unused. Raw data is
 read-only. Do not download data or open Medium/Large variants. All derived
-artifacts go under `data/processed/` or `outputs/`, both ignored by Git.
+artifacts go under `data/processed/` or `outputs/`, both ignored by Git:
+
+- `data/processed/transactions.parquet`: compact edges in source-row order;
+  M2 builds graph arrays sorted by `(ts, tx_id)`.
+- `data/processed/accounts.parquet`: reversible int32 ID to bank/account map.
+- `data/processed/attempts.parquet`: exact transaction membership, temporal
+  order, start-period assignment, and straddling flags.
+- `data/processed/split.json`: half-open period boundaries.
+- `outputs/m1/checklist.md` and `checklist.json`: measurements and provenance.
+- `outputs/m1/measured_config.yaml`: train-derived initial detector settings.
+
+The actual CSV has duplicate `Account` headers. They are mapped by column
+position, preserving bank strings and leading zeros. `tx_id` is the zero-based
+CSV data-row index. Pattern matching uses original decimal values before
+float32 conversion; missing or ambiguous matches fail instead of guessing.
+Naive dataset timestamps are encoded as UTC epoch seconds for arithmetic; the
+source timezone is unspecified. Ties remain distinct through transaction IDs.
+
+M1 performs descriptive full-timeline counts only. Parameter derivation uses
+train rows and fully contained train attempts, excluding train-start straddlers
+from fitting. Quantile policies are in `configs/default.yaml`; measured settings
+are emitted under `outputs/`. Dampening will use activity-bin occupancy and
+count regularity within the measured train span, replacing a 30-day rule.
+
+## M1 measurements
+
+Produced by `.\.venv\Scripts\python -m aml prepare --config configs/default.yaml`
+and then `.\.venv\Scripts\aml prepare --config configs/default.yaml --reuse` after
+selecting timestamp-quantile boundaries:
+
+- 5,078,345 transactions; 515,088 bank-qualified accounts; 5,177 labeled
+  positives (0.10194%). Timeline: September 1–18, 2022, on a 60-second grid.
+- Train ends September 6 at 13:36; validation ends September 8 at 16:12.
+  Half-open periods keep equal timestamps together. Calendar-span fractions
+  were unsuitable because of a sparse September 11–18 tail.
+- Train/validation/test positive edge counts: 2,297 / 1,082 / 1,798.
+  Attempt counts by start period: 199 / 76 / 95; 155 attempts straddle boundaries.
+- 370 attempts match exactly to 3,209 transactions. Another 1,968 labeled
+  positives have no membership in this patterns file. Attempt recall covers
+  only enumerated attempts; edge/account metrics retain all labels.
+- 591,212 self-loops, including 11 positives. Excluding those positives would
+  cap edge recall at 99.7875%. No degree cap has been applied or measured yet.
+- Transactions CSV: 475,664,283 bytes; compact transactions Parquet:
+  105,138,395 bytes. Original loading peak working set: 330,629,120 bytes;
+  original conversion plus pattern parsing: 35.74 seconds. The checklist also
+  reports its separate process peak. These are local-run observations.
+- Measured host RAM: 25,534,783,488 bytes. CPU-only planning remains in place.
+
+See [the generated checklist](outputs/m1/checklist.md) for exact boundaries,
+per-typology counts, all straddlers, currency/degree distributions, and initial
+parameters. Initial fan `k=2` is permissive and not a performance claim.
+`STACK` is partially mapped to qualifying pass-through paths; `BIPARTITE` and
+`RANDOM` have no dedicated detector. No final test evaluation has occurred.
 
 The dataset is synthetic and generated using explicit laundering patterns;
 detectors targeting those patterns may be favored. Results will not establish
@@ -53,20 +112,27 @@ and baseline cluster definitions must be resolved before M3.
 `evidence.features`; the section 14.1 alert contract is preserved. M12 uses
 templates and an offline `LLMClient` stub; no provider key is required.
 
-## TO VERIFY: dataset citation, licenses and sources to credit
+## Dataset citation and license
+
+Erik Altman, Jovan Blanuša, Luc von Niederhäusern, Beni Egressy, Andreea Anghel,
+and Kubilay Atasu. *Realistic Synthetic Financial Transactions for Anti-Money
+Laundering Models*. NeurIPS 2023, Datasets and Benchmarks Track.
+[Official proceedings](https://proceedings.neurips.cc/paper_files/paper/2023/hash/5f38404edff6f3f642d6fa5892479c42-Abstract-Datasets_and_Benchmarks.html).
+
+IBM's [dataset README](https://github.com/IBM/AML-Data/blob/main/README.md)
+identifies the data license as **Community Data License Agreement – Sharing 1.0**
+and links the [Kaggle dataset](https://www.kaggle.com/datasets/ealtman2019/ibm-transactions-for-anti-money-laundering-aml).
+The repository's Apache-2.0 license is distinct from the data license.
+[Official CDLA-Sharing-1.0 text](https://cdla.dev/sharing-1-0/).
+These primary sources were checked during M1; no dataset or reference code was
+downloaded. Raw and derived datasets are not committed or redistributed here.
+
+## TO VERIFY: remaining references and licenses
 
 The following are supplied by the request/specification, **not independently
 verified citations or license findings**. Verify original sources before citing
 them as established facts. No reference code has been copied.
 
-- Dataset: IBM AMLworld, Kaggle identifier
-  `ealtman2019/ibm-transactions-for-anti-money-laundering-aml`.
-- Supplied paper: Altman et al., *Realistic Synthetic Financial Transactions
-  for AML Models*, NeurIPS 2023 Datasets and Benchmarks. Verify bibliographic
-  details and dataset association.
-- Supplied dataset license: Community Data License Agreement – Sharing 1.0
-  (CDLA-Sharing 1.0). Confirm the original dataset license and derived-data
-  obligations.
 - IBM Graph Feature Preprocessor: verify source, license, and the claim that
   pattern features plus gradient boosting outperform GNNs on minority-class F1.
 - Egressy et al., *Provably Powerful GNNs for Directed Multigraphs*, AAAI 2024:
@@ -79,6 +145,7 @@ them as established facts. No reference code has been copied.
 
 ## Milestone status
 
-M0: scaffold and instructions. M1 has not started. Planning assumes a CPU-only
-16 GB laptop and one or two people for one or two days; these are placeholders,
-not measured resource or runtime claims. Stop and report after each milestone.
+M0: committed scaffold. M1: preparation and checklist; M2 has not started.
+Planning assumes CPU-only execution and one or two people for one or two days;
+the team/time values remain placeholders. Host RAM and loading peak memory are
+measured in the checklist. Stop and report after each milestone.

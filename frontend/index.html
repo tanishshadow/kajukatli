@@ -174,6 +174,13 @@
       *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
       .reveal { opacity: 1; transform: none; }
     }
+    .editorial-pair { position:relative; isolation:isolate; }
+    .editorial-outgoing { position:sticky; top:var(--pin-top,0px); z-index:0; }
+    .editorial-incoming { position:relative; z-index:1; border-radius:64px 64px 0 0; background:var(--paper); }
+    #workflow.editorial-incoming { background:color-mix(in srgb,var(--sage) 18%,var(--paper)); opacity:1; transform:none; transition:none; }
+    .final.editorial-incoming { background:color-mix(in srgb,var(--apricot) 18%,var(--paper)); opacity:1; transform:none; transition:none; }
+    @media(max-width:760px) { .editorial-incoming { border-radius:32px 32px 0 0; } }
+    @media(prefers-reduced-motion:reduce) { .editorial-outgoing { position:relative; top:auto; } .editorial-incoming { border-radius:0; } }
   </style>
 </head>
 <body data-page="overview">
@@ -222,12 +229,13 @@
       <span data-value="test-state">Report status</span>
     </section>
 
-    <section class="section intro grid-paper" id="approach" aria-labelledby="approach-title">
+    <div class="editorial-pair">
+    <section class="section intro grid-paper editorial-outgoing" id="approach" aria-labelledby="approach-title">
       <p class="hand">The pattern is in the path</p>
       <div class="reveal"><h2 id="approach-title">A transaction makes more sense when you can see what came before—and what followed.</h2><div class="orbit" aria-hidden="true">↝</div></div>
     </section>
 
-    <section class="section workflow reveal" id="workflow" aria-labelledby="workflow-title">
+    <section class="section workflow reveal editorial-incoming" id="workflow" aria-labelledby="workflow-title">
       <div><p class="eyebrow">From edges to evidence</p><h2 id="workflow-title">See the structure.<br>Keep the sequence.</h2><p class="workflow-intro">A temporal, directed graph preserves parallel transfers and their order, so detection can follow connected behavior across accounts.</p></div>
       <div class="flow-map" aria-label="Three stages: detect patterns, connect evidence, rank alerts">
         <div class="flow-line" aria-hidden="true"></div>
@@ -237,7 +245,9 @@
       </div>
     </section>
 
-    <section class="section features" id="capabilities" aria-labelledby="features-title">
+    </div>
+    <div class="editorial-pair">
+    <section class="section features editorial-outgoing" id="capabilities" aria-labelledby="features-title">
       <div class="feature-heading reveal"><div><p class="hand">Signals that work together</p><h2 id="features-title">Patterns leave<br>a shape.</h2></div><p>Purpose-built graph patterns reveal behaviors that a single transaction threshold can miss.</p></div>
       <div class="feature-grid">
         <article class="feature reveal"><h3>Fan in / fan out</h3><div class="feature-art dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div><p>Many counterparties gather around a hub within a measured time window.</p></article>
@@ -246,12 +256,29 @@
       </div>
     </section>
 
-    <section class="section final reveal" aria-labelledby="final-title">
+    <section class="section final reveal editorial-incoming" aria-labelledby="final-title">
       <div><p class="eyebrow">Explore the backend</p><h2 id="final-title">A clearer view of connected activity.</h2></div>
       <div><p>AML Graph is a research prototype evaluated on synthetic transaction patterns.</p><a class="text-link" href="../README.md">Read the project notes <span aria-hidden="true">↗</span></a></div>
     </section>
+    </div>
   </main>
   <footer><a class="wordmark" href="#top"><span aria-hidden="true"></span>AML GRAPH</a><p>Temporal graph detection · Research prototype</p><a href="../README.md">Project documentation ↗</a></footer>
   <script src="site-pages.js" defer></script>
+  <script>
+    (() => {
+      const panels = [...document.querySelectorAll('.editorial-outgoing')];
+      // Pin the bottom of tall sections only after all of their content has
+      // passed through the viewport. Sticky positioning reverses with scroll.
+      const measure = () => panels.forEach(panel => {
+        panel.style.setProperty('--pin-top', `${Math.min(0, document.documentElement.clientHeight - panel.offsetHeight)}px`);
+      });
+      if ('ResizeObserver' in window) {
+        const observer = new ResizeObserver(measure);
+        panels.forEach(panel => observer.observe(panel));
+      }
+      window.addEventListener('resize', measure, {passive:true});
+      measure();
+    })();
+  </script>
 </body>
 </html>

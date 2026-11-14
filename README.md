@@ -177,8 +177,25 @@ them as established facts. No reference code has been copied.
 
 ## Milestone status
 
-M0: committed scaffold. M1: preparation and checklist. M2: temporal graph and
-CSR indexes, with 34 passing tests across M1/M2. M3 has not started.
+M0–M2 are complete. M3 adds `aml baseline`: a 16-trial train-only grid,
+rolling currency-separated volume/count rules, and the common edge/account,
+cluster-precision and attempt-recall harness. `outputs/m3/report.md` records
+train and validation results; no test metrics were computed. The same 16-trial
+budget is configured for the main system's M9 tuning.
+
+Baseline clusters use account-connected components in overlapping windows
+ending on a fixed 86,400-second grid (stride capped at window width), including
+the prefix and tail; identical edge sets are deduplicated. Baseline account
+flags do not recursively propagate through incident edges. Threshold amounts
+use native units, and currency volumes are never added together. This is a
+documented baseline limitation, not an FX-normalized model claim.
+
+The approved bootstrap design joins attempts sharing accounts into dependent
+blocks and groups remaining accounts by connected component over the fixed
+period population. Confidence-interval computation remains scheduled for M11.
+M3's measured account F1 is 0.02213 on train and 0.01418 on validation, with
+22,344 validation clusters and precision@20 of zero. This baseline has poor
+precision; the results are reported without test-period tuning.
 Planning assumes CPU-only execution and one or two people for one or two days;
 the team/time values remain placeholders. Host RAM and loading peak memory are
 measured in the checklist. Stop and report after each milestone.

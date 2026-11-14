@@ -7,6 +7,19 @@ data:
   processed_dir: data/processed
   chunk_rows: 100000
 output_dir: outputs
+baseline_grid:
+  amount: [1000000, 10000000]
+  count: [5, 10]
+  volume: [10000000, 100000000]
+  window_seconds: [159090, 318180]
+  cluster_stride_seconds: 86400
+evaluation:
+  cluster_tau: 0.5
+  attempt_tau: 0.5
+  precision_k: 20
+  bootstrap_replicates: 200
+  confidence_level: 0.95
+  tuning_trials: 16
 split_fractions: [0.6, 0.2, 0.2]
 # Full calendar-span fractions put almost all rows in train because of a sparse
 # September 11-18 tail. Timestamp quantiles retain that tail without dropping rows.

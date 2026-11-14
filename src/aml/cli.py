@@ -24,5 +24,13 @@ def prepare(config: Path = typer.Option(Path("configs/default.yaml"), exists=Tru
     typer.echo(f"Checklist: {Settings.from_yaml(config).output_dir / 'm1' / 'checklist.md'}")
 
 
+@app.command()
+def baseline(config: Path = typer.Option(Path("configs/default.yaml"), exists=True)) -> None:
+    """Tune baseline on train and report train/validation metrics."""
+    import json
+    from aml.eval.run_baseline import run
+    typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
+
+
 if __name__ == "__main__":
     app()

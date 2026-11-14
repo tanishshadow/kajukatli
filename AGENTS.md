@@ -16,7 +16,8 @@ M13; retain backend README work. M12 uses an offline stub behind `LLMClient` onl
 - Run `pytest -q` before every milestone report and paste the actual summary.
 - Report Built, Tests, Assumptions made, Numbers produced (with commands), and
   Needs from me before the next milestone. State failures and incomplete gates.
-- Stop after each milestone report and wait for the user before advancing.
+- The user authorized M3 through M7 in one batch. Report and commit each in
+  order, continue between these milestones, and stop after M7.
 - Make one small, reviewable Git commit per milestone. Never include raw data.
 - Do not cut scope without telling the user; use section 16's cut order only.
 
@@ -63,9 +64,12 @@ M13; retain backend README work. M12 uses an offline stub behind `LLMClient` onl
 - Attempt recall uses whole-attempt membership and start-period attribution;
   list straddling attempts. Cluster precision and precision@k are defined;
   do not invent cluster recall or true negatives. Recall is attempt-level.
-- Bootstrap dependent blocks, not individual accounts. The exact block
-  construction and baseline cluster construction remain to be specified before
-  M3 implementation; do not silently invent these evaluation semantics.
+- Bootstrap dependent blocks, not individual accounts. The user approved
+  joining attempts sharing accounts into blocks, with remaining benign accounts
+  grouped by connected component over a fixed period account population.
+- Baseline clusters are account-connected components of flagged edges within
+  each rolling baseline window; deduplicate identical edge sets. Preserve the
+  edge/account predictions of the baseline rules independently of clustering.
 - Gather-scatter: at least `m_in` distinct sources into a hub followed by at
   least `m_out` distinct destinations within `W2`. Matched total outflow/inflow
   ratio is in `[rho_lo, 1 + eps]`. Derive sizes from train patterns. Stages may

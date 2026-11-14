@@ -39,6 +39,8 @@ class Settings(StrictModel):
     split_method: Literal["whole_days", "timestamp_quantiles"] = "whole_days"
     derivation: DerivationSettings = Field(default_factory=DerivationSettings)
     detectors: dict[str, Any] = Field(default_factory=dict)
+    baseline_grid: dict[str, Any] = Field(default_factory=dict)
+    evaluation: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_fractions(self) -> "Settings":

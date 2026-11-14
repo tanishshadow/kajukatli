@@ -22,6 +22,21 @@ typologies, FX, and evidence-backed alerts. M8 adds guarded clustering and
 train-only account/cluster scoring. Final tuning and test evaluation remain
 M9–M11 work. Frontend pages are in `frontend/`; backend source, tests, and configuration are in `backend/`. Raw datasets and generated `data/` and `outputs/` stay at the repository root.
 
+## Frontend and backend integration
+
+The static pages in `frontend/` use read-only, same-origin JSON endpoints from
+the Python backend. From the repository root, run:
+
+```powershell
+.\.venv\Scripts\aml web --config backend/configs/default.yaml
+```
+
+Then open `http://127.0.0.1:8765/`. The overview, approach, detector, and
+evaluation pages read generated summaries from `outputs/`; missing artifacts
+show an empty/offline state. The API returns aggregate counts and metrics only,
+not transaction rows or account identifiers. The server does not start detector
+jobs or rerun the one-shot test report.
+
 ## Environment
 
 The user authorized the existing **Python 3.13.7** instead of installing the
@@ -249,22 +264,25 @@ The model probabilities are not claimed to be calibrated real-world AML risk.
 Run `.\.venv\Scripts\aml cluster` after the four detector commands. Both models,
 the complete ranked cluster list and feature table are retained in `outputs/m8/`.
 Only the frontend JSON export is limited to the configured top 100; this cap is
-logged and is not an evaluation cutoff. M9 still selects a cutoff on validation,
-tunes parameters and freezes them. M11 still performs the one final test
-evaluation and confidence intervals. No test-period metrics have been computed.
+logged and is not an evaluation cutoff. M9 selected a validation cutoff and
+froze settings. The guarded one-shot M11 report exists; it has not been rerun.
 Planning assumes CPU-only execution and one or two people for one or two days;
 the team/time values remain placeholders. Host RAM and loading peak memory are
 measured in the checklist. The user authorized completing through M8 without pauses.
 
 ## Limitations / not done
 
-- M10 is reduced and NOT COMPLETE: only amount splitting at strengths 0 and 1.0
-  was run on validation. Delays and decoys were not run. The main system's
-  attempt/account recall was 0.0 at both strengths; the baseline's attempt
-  recall was 0.2632 at strength 0 and 1.0 at strength 1.0.
-- M11 still needs the single final test report. Sensitivity tables, baseline
-  clustering variants, difference confidence intervals, and straddler lists
-  are not done.
+- M10 remains NOT COMPLETE: amount splitting, delays, and decoys were run on
+  validation at five strengths; the combined perturbation was not run. The main
+  system's attempt recall was 0 at every amount-split/decoy strength and 0 to
+  0.0132 over delay strengths. The baseline attempt recall varied by pattern;
+  see `outputs/evasion.csv` for every measured value.
+- M11 report code now supports edge/account attempt-coverage sensitivity at
+  tau 0.3/0.5/0.7, cluster precision-only sensitivity at tau 0.3/0.5/0.7, and
+  straddling-attempt lists. These additions were unit-tested but were not run on
+  test: the one-shot marker remains in place. The stored final report is the
+  earlier reduced report. Baseline cluster variants and system-minus-baseline
+  confidence intervals are still not implemented.
 - M12 uses only the offline `LLMClient` stub; no provider integration is done.
   Validation failure falls back to the alert's deterministic template and is
   counted in `outputs/narrative_stats.json`.

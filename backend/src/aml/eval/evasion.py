@@ -141,9 +141,9 @@ def validate_perturbation(original: pd.DataFrame, altered: pd.DataFrame, strengt
         assert np.isclose(expected, split, rtol=1e-6, atol=1e-5), (expected, split)
     if kind in ("delays", "combined"):
         assert altered["ts"].is_monotonic_increasing
-    if kind in ("decoys", "combined"):
+    if kind == "decoys":
         new = altered.loc[~altered.tx_id.isin(original.tx_id)]
-        assert (new.label == 0).all() or kind in ("amount_split", "combined")
+        assert len(new) > 0 and (new.label == 0).all()
     assert not altered.tx_id.duplicated().any()
     assert altered[["ts", "tx_id"]].values.tolist() == altered.sort_values(["ts", "tx_id"])[["ts", "tx_id"]].values.tolist()
 
@@ -222,10 +222,10 @@ def run(settings: Settings) -> dict:
     accounts_path = settings.data.processed_dir / "accounts.parquet"
     account_table = pq.read_table(accounts_path).to_pandas()
     banks = dict(zip(account_table.account_id.astype(int), account_table.bank.astype(str), strict=True))
-    strengths = [0.0, 1.0]
+    strengths = [0.0, 0.25, 0.5, 0.75, 1.0]
     rows: list[dict] = []
     unperturbed_result: dict[str, float] | None = None
-    for kind in ("amount_split",):
+    for kind in ("amount_split", "delays", "decoys"):
         for level, strength in enumerate(strengths):
             changed, changed_attempts = _perturb(frame, attempts, float(strength), kind, settings.seed + level)
             validate_perturbation(frame, changed, float(strength), kind, attempts)
@@ -248,5 +248,6 @@ def run(settings: Settings) -> dict:
         "validation_only": True, "frozen_hash": digest, "baseline": baseline_config.model_dump(),
         "model": str(model_path), "cutoff": cutoff, "rows": rows}, indent=2) + "\n")
     return {"command": "aml evasion", "validation_only": True, "frozen_hash": digest,
-        "rows": len(rows), "complete": False, "scope": "reduced: amount_split at strengths 0 and 1.0; delays and decoys not done",
+        "rows": len(rows), "complete": False,
+        "scope": "amount splitting, delays, and benign decoys across configured strengths; combined perturbation not run",
         "csv": str(settings.output_dir / "evasion.csv"), "json": str(settings.output_dir / "evasion.json")}

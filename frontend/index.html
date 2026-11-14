@@ -79,6 +79,12 @@
     .art-caption { position: absolute; bottom: .55rem; left: var(--page-pad); z-index: 1; font-size: .62rem; text-transform: uppercase; letter-spacing: .12em; }
     .art-caption.right { left: auto; right: var(--page-pad); }
     .hero-meta { position: absolute; bottom: 1.35rem; right: var(--page-pad); color: #5d5e59; font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; }
+    .live-readout { padding: 1.2rem var(--page-pad); display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line); font-size: .72rem; }
+    .live-readout p { margin: 0; color: #5d5e59; }
+    .live-readout div { display: grid; gap: .15rem; }
+    .live-readout strong { font-size: 1rem; letter-spacing: -.04em; }
+    .live-readout span { color: #5d5e59; }
+    [data-backend-status].is-offline { color: #9b442d; }
 
     .grid-paper { background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px), linear-gradient(to bottom, var(--grid) 1px, transparent 1px); background-size: 2.75rem 2.75rem; }
     .section { padding: clamp(5rem, 10vw, 9rem) var(--page-pad); }
@@ -153,6 +159,7 @@
       .feature-grid { grid-template-columns: 1fr; }
       .feature { min-height: 17rem; }
       .feature-art { min-height: 7rem; }
+      .live-readout { align-items: flex-start; flex-direction: column; }
       footer { align-items: start; flex-direction: column; gap: .75rem; }
     }
     @media (max-width: 390px) {
@@ -169,7 +176,7 @@
     }
   </style>
 </head>
-<body>
+<body data-page="overview">
   <header>
     <nav class="site-nav" aria-label="Main navigation">
       <a class="wordmark" href="#top" aria-label="AML Graph home"><span aria-hidden="true"></span>AML GRAPH</a>
@@ -207,6 +214,14 @@
       <span class="hero-meta">Temporal · directed · connected</span>
     </section>
 
+    <section class="live-readout" aria-label="Backend project snapshot">
+      <p data-backend-status>Connecting to project outputs…</p>
+      <div><strong data-value="transactions">—</strong><span>transactions indexed</span></div>
+      <div><strong data-value="accounts">—</strong><span>accounts represented</span></div>
+      <div><strong data-value="ranked-clusters">—</strong><span>ranked clusters</span></div>
+      <span data-value="test-state">Report status</span>
+    </section>
+
     <section class="section intro grid-paper" id="approach" aria-labelledby="approach-title">
       <p class="hand">The pattern is in the path</p>
       <div class="reveal"><h2 id="approach-title">A transaction makes more sense when you can see what came before—and what followed.</h2><div class="orbit" aria-hidden="true">↝</div></div>
@@ -237,26 +252,6 @@
     </section>
   </main>
   <footer><a class="wordmark" href="#top"><span aria-hidden="true"></span>AML GRAPH</a><p>Temporal graph detection · Research prototype</p><a href="../README.md">Project documentation ↗</a></footer>
-  <script>
-    const nav = document.querySelector('.site-nav');
-    const menuButton = document.querySelector('.menu-toggle');
-    const links = document.querySelector('.nav-links');
-    window.addEventListener('scroll', () => nav.classList.toggle('is-scrolled', window.scrollY > 24), { passive: true });
-    menuButton.addEventListener('click', () => {
-      const open = menuButton.getAttribute('aria-expanded') !== 'true';
-      menuButton.setAttribute('aria-expanded', String(open));
-      menuButton.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-      links.classList.toggle('is-open', open);
-    });
-    links.addEventListener('click', event => {
-      if (event.target.closest('a')) { links.classList.remove('is-open'); menuButton.setAttribute('aria-expanded', 'false'); menuButton.setAttribute('aria-label', 'Open navigation'); }
-    });
-    if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-        if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }
-      }), { threshold: .15 });
-      document.querySelectorAll('.reveal').forEach(element => observer.observe(element));
-    } else document.querySelectorAll('.reveal').forEach(element => element.classList.add('is-visible'));
-  </script>
+  <script src="site-pages.js" defer></script>
 </body>
 </html>

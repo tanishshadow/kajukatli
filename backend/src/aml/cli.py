@@ -77,5 +77,13 @@ def report(config: Path = typer.Option(Path("backend/configs/default.yaml"), exi
     typer.echo(json.dumps(run(Settings.from_yaml(config)), indent=2))
 
 
+@app.command()
+def web(config: Path = typer.Option(Path("backend/configs/default.yaml"), exists=True),
+        host: str = typer.Option("127.0.0.1"), port: int = typer.Option(8765, min=1, max=65535)) -> None:
+    """Serve the static frontend and read-only summaries of generated AML outputs."""
+    from aml.web import serve
+    serve(Settings.from_yaml(config), host=host, port=port)
+
+
 if __name__ == "__main__":
     app()

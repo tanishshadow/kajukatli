@@ -1,10 +1,125 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f2f2f0"><title>Investigation graph — AML Graph</title><link rel="stylesheet" href="site-pages.css"><link rel="stylesheet" href="investigation.css"></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2f2f0">
+  <title>Investigation — AML Graph</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="site-pages.css">
+  <link rel="stylesheet" href="investigation.css">
+</head>
 <body data-page="investigation">
-<header><nav class="site-nav" aria-label="Main navigation"><a class="wordmark" href="index.html"><span aria-hidden="true"></span>AML GRAPH</a><div class="nav-links" id="nav-links"><a href="approach.html">Approach</a><a href="patterns.html">Patterns</a><a href="evaluation.html">Evaluation</a><a href="investigation.html" aria-current="page">Investigate</a></div><div class="nav-actions"><a class="nav-cta" href="patterns.html">Pattern library</a><button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="nav-links">☰</button></div></nav></header>
-<main class="investigation-shell"><div class="workspace-head"><div><p class="eyebrow">Investigation workspace</p><h1>Follow the transaction path.</h1><p class="workspace-note">Explore detector candidates from the processed HI-Small transactions. A candidate is a rule match, not a confirmed laundering event.</p></div><span id="connection" class="connection">Connecting to backend…</span></div>
-<section class="controls" aria-label="Case selection"><label>Detector<select id="detector"><option value="">Loading detector outputs…</option></select></label><label>Detected case<select id="case-select" disabled><option>Select a detector first</option></select></label><button id="more-cases" class="quiet-button" hidden>Load more cases</button></section><p id="status" class="status" role="status">Loading real detector outputs…</p>
-<section class="investigation-grid"><div class="graph-column"><div class="graph-toolbar"><strong id="graph-title">Transaction network</strong><div class="graph-actions"><span class="filter-toggle">Matched transfers only</span><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button><button id="reset-view">Reset view</button></div></div><div id="graph-wrap" class="graph-wrap"><svg id="graph" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Interactive directed transaction graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs><g id="viewport"><g id="edges"></g><g id="nodes"></g></g></svg><div id="graph-empty" class="graph-empty">Choose a detector and a real case to inspect its accounts and transfers.</div></div>
-<div class="playback"><div class="play-buttons"><button id="play">▶ Play</button><button id="pause" disabled>Ⅱ Pause</button><button id="reset-play">↺ Reset</button></div><input id="timeline" type="range" min="0" max="0" value="0" aria-label="Transaction playback position" disabled><span id="timeline-label">No transactions</span></div>
-<div class="timeline-list"><div class="section-heading"><h2>Transfer sequence</h2><span id="edge-count">—</span></div><ol id="transactions"><li class="muted">Select a case to load its transactions.</li></ol></div></div>
-<aside class="inspector"><section><p class="section-kicker">Selected evidence</p><h2 id="evidence-title">No case selected</h2><p id="evidence-summary" class="muted">Select a detected case to see the detector match and supporting evidence.</p><div id="evidence-conditions" class="conditions"></div><p class="candidate-note">Candidate pattern only. This detector output does not confirm intent or establish money laundering.</p></section><section class="detail-section"><p class="section-kicker">Selection details</p><div id="details" class="details"><p class="muted">Click an account or transaction edge.</p></div></section><section class="detail-section"><p class="section-kicker">Case scope</p><div id="case-meta" class="details"><p class="muted">Actual timestamps, amounts and labels load with the selected case.</p></div></section></aside></section></main><script src="site-pages.js" defer></script><script src="investigation.js" defer></script></body></html>
+  <header>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a class="wordmark" href="index.html"><span aria-hidden="true"></span>AML GRAPH</a>
+      <div class="nav-links" id="nav-links">
+        <a href="approach.html">Approach</a><a href="patterns.html">Patterns</a>
+        <a href="evaluation.html">Evaluation</a><a href="investigation.html" aria-current="page">Investigate</a>
+      </div>
+      <div class="nav-actions">
+        <a class="nav-cta" href="patterns.html">Pattern library</a>
+        <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="nav-links">☰</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="investigation-shell">
+    <section class="workspace-top" aria-labelledby="page-title">
+      <div class="workspace-title">
+        <p class="eyebrow">Investigation workspace</p>
+        <h1 id="page-title">Transaction network</h1>
+        <span id="connection" class="connection">Connecting to backend…</span>
+      </div>
+      <div class="case-context">
+        <div>
+          <p class="section-kicker">Selected candidate</p>
+          <h2 id="case-title">Choose a detector case</h2>
+          <p id="case-summary" class="muted">Browse actual detector results, then inspect the matched transfers.</p>
+        </div>
+        <span class="candidate-tag">Candidate · review required</span>
+      </div>
+    </section>
+
+    <section class="case-controls" aria-label="Select a detector and case">
+      <label>Detector<select id="detector"><option value="">Loading detector outputs…</option></select></label>
+      <label class="case-picker">Detected case<select id="case-select" disabled><option>Select a detector first</option></select></label>
+      <button id="more-cases" class="text-button" hidden>Load more cases</button>
+      <span id="status" class="status" role="status">Loading real detector outputs…</span>
+    </section>
+
+    <section class="investigation-layout">
+      <div class="network-column">
+        <div class="network-heading">
+          <div><h2 id="graph-title">Transaction network</h2><span id="edge-count" class="subtle-count">—</span></div>
+          <div class="graph-actions" aria-label="Graph controls">
+            <button id="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+            <button id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+            <button id="reset-view" class="reset-button">Reset view</button>
+          </div>
+        </div>
+        <div id="graph-wrap" class="graph-wrap">
+          <svg id="graph" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Interactive directed transaction graph">
+            <defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="context-stroke"></path></marker></defs>
+            <g id="viewport"><g id="edges"></g><g id="nodes"></g></g>
+          </svg>
+          <div id="graph-empty" class="graph-empty">Select a detector and case to load its matched accounts and transfers.</div>
+          <span class="graph-legend"><i></i> Matched transfer</span>
+        </div>
+        <section class="sequence-panel" aria-label="Chronological playback">
+          <div class="sequence-topline"><span class="section-kicker">Transfer sequence</span><span id="timeline-label" class="timeline-label">No transactions</span></div>
+          <div id="timeline-track" class="timeline-track" role="group" aria-label="Transaction timestamps"></div>
+          <div class="timeline-ends"><span id="timeline-start">—</span><span id="timeline-end">—</span></div>
+          <div class="playback-controls">
+            <div class="play-buttons"><button id="play" class="play-button">Play</button><button id="pause" disabled>Pause</button><button id="reset-play">Reset</button></div>
+            <input id="timeline" type="range" min="0" max="0" value="0" aria-label="Transaction playback position" disabled>
+          </div>
+        </section>
+      </div>
+
+      <aside class="evidence-panel" aria-label="Selected case evidence">
+        <section class="finding-section">
+          <p class="section-kicker">Detector finding</p>
+          <h2 id="evidence-title">No case selected</h2>
+          <p id="evidence-summary" class="muted">Select a case to review why the detector matched it.</p>
+          <div id="case-metrics" class="case-metrics"></div>
+        </section>
+        <section class="evidence-section">
+          <h3>Matched conditions</h3>
+          <ul id="evidence-conditions" class="conditions"><li class="muted">Detector evidence appears here after case selection.</li></ul>
+        </section>
+        <section class="evidence-section">
+          <details class="evidence-disclosure">
+            <summary>Hit metadata</summary>
+            <div id="hit-metadata" class="hit-metadata"><p class="muted">No detector metadata loaded.</p></div>
+          </details>
+        </section>
+        <section class="evidence-section">
+          <h3>Selection details</h3>
+          <div id="details" class="details"><p class="muted">Click an account or transfer in the graph or table.</p></div>
+        </section>
+        <section class="evidence-section case-scope">
+          <details class="evidence-disclosure">
+            <summary>Case scope</summary>
+            <div id="case-meta" class="details"><p class="muted">Case dates and counts appear here.</p></div>
+          </details>
+        </section>
+        <p class="candidate-note">A detector match is a candidate for review, not confirmation of money laundering.</p>
+      </aside>
+    </section>
+
+    <section class="transaction-section" aria-labelledby="transaction-title">
+      <div class="transaction-heading"><div><p class="section-kicker">Selected case evidence</p><h2 id="transaction-title">Transactions</h2></div><span id="transaction-count" class="subtle-count">No rows</span></div>
+      <div class="table-scroll">
+        <table class="transaction-table">
+          <thead><tr><th>Time</th><th>Source</th><th>Destination</th><th class="numeric">Amount sent</th><th>Currency</th><th>Label</th><th class="numeric">Transaction ID</th></tr></thead>
+          <tbody id="transactions"><tr><td colspan="7" class="empty-row">Choose a case to load its matched transfers.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="site-pages.js" defer></script>
+  <script src="investigation.js" defer></script>
+</body>
+</html>

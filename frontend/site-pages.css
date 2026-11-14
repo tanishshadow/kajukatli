@@ -70,6 +70,19 @@ footer p { margin:0; color:#62635d; }
 footer a:last-child { text-underline-offset:3px; }
 .reveal { opacity:0; transform:translateY(18px); transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1); }
 .reveal.is-visible { opacity:1; transform:translateY(0); }
+/* Evaluation color fields reuse the homepage palette; content and layout stay intact. */
+body[data-page="evaluation"] .metric-grid { border-color:transparent; gap:1rem; }
+body[data-page="evaluation"] .metric { background:var(--sky); border:0; border-radius:1rem; padding:1.5rem 1.4rem 1.7rem; }
+body[data-page="evaluation"] .metric:nth-child(2) { background:var(--blue); }
+body[data-page="evaluation"] .metric:nth-child(3) { background:var(--coral); }
+body[data-page="evaluation"] .metric span { color:var(--ink); }
+body[data-page="evaluation"] [data-typology-results] li { padding-inline:1rem; background:color-mix(in srgb,var(--sky) 25%,var(--paper)); }
+body[data-page="evaluation"] [data-typology-results] li:nth-child(even) { background:color-mix(in srgb,var(--sage) 25%,var(--paper)); }
+body[data-page="evaluation"] [data-evasion-results] li { padding-inline:1rem; background:color-mix(in srgb,var(--apricot) 24%,var(--paper)); }
+body[data-page="evaluation"] [data-evasion-results] li:nth-child(even) { background:color-mix(in srgb,var(--coral) 18%,var(--paper)); }
+body[data-page="evaluation"] .editorial-row:first-child .step-number { color:var(--ink); background:var(--lime); }
+body[data-page="evaluation"] .editorial-row:nth-child(2) .step-number { color:var(--ink); background:var(--apricot); }
+body[data-page="evaluation"] .page-cta { background:var(--sage); }
 @keyframes nav-in { from { opacity:0; transform:translate(-50%,-12px); } to { opacity:1; transform:translate(-50%,0); } }
 @media(max-width:760px) {
  .site-nav { padding-left:.9rem; }.menu-toggle { display:inline-grid; place-items:center; }
